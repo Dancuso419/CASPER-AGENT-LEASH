@@ -1,0 +1,2 @@
+[[contracts]]
+fqn = "agent_leash::AgentLeash"

@@ -1,0 +1,190 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "authors": [],
+  "repository": null,
+  "homepage": null,
+  "contract_name": "AgentLeash",
+  "contract_version": "0.1.0",
+  "types": [
+    {
+      "struct": {
+        "name": "AgentRecord",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spending_cap",
+            "description": null,
+            "ty": "U512"
+          },
+          {
+            "name": "allowed_action",
+            "description": null,
+            "ty": "ActionType"
+          },
+          {
+            "name": "is_active",
+            "description": null,
+            "ty": "Bool"
+          },
+          {
+            "name": "created_at",
+            "description": null,
+            "ty": "U64"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "ActionType",
+        "description": null,
+        "variants": [
+          {
+            "name": "TransferOnly",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "entry_points": [
+    {
+      "name": "register_agent",
+      "description": "Owner registers a new agent. Caller becomes the owner. Reverts if already registered.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "agent",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "spending_cap",
+          "description": null,
+          "ty": "U512",
+          "optional": false
+        },
+        {
+          "name": "allowed_action",
+          "description": null,
+          "ty": "ActionType",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "check_and_execute",
+      "description": "The agent (identified by `caller()`) attempts to transfer `amount` motes to `recipient`.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U512",
+          "optional": false
+        },
+        {
+          "name": "recipient",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "revoke_agent",
+      "description": "Owner-only. Marks the agent revoked; subsequent actions are rejected.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "agent",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_agent_status",
+      "description": "Read-only identity + rule lookup for the dashboard.",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "agent",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "AgentRecord",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "deposit",
+      "description": "Payable: fund the contract purse so agents have CSPR to spend. Attached value is",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "__cargo_purse",
+          "description": null,
+          "ty": "URef",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [],
+  "call": {
+    "wasm_file_name": "AgentLeash.wasm",
+    "description": "No global state to initialize; the agents mapping starts empty.",
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "If true and the key specified in odra_cfg_package_hash_key_name already exists, it will be overwritten.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgrade",
+        "description": "The arg name for telling the installer that the contract is being upgraded.",
+        "ty": "Bool",
+        "optional": false
+      }
+    ]
+  }
+}

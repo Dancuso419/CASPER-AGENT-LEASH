@@ -1,0 +1,15 @@
+# claude code internal
+.claude/
+
+# secrets
+.env
+*.pem
+*.key
+
+# build artifacts
+target/
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

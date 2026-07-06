@@ -1,0 +1,109 @@
+{
+  "name": "AgentLeash",
+  "events": [],
+  "entrypoints": [
+    {
+      "name": "init",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Constructor",
+      "attributes": []
+    },
+    {
+      "name": "register_agent",
+      "args": [
+        {
+          "name": "agent",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "spending_cap",
+          "ty": "U512",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "allowed_action",
+          "ty": "U8",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "check_and_execute",
+      "args": [
+        {
+          "name": "amount",
+          "ty": "U512",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "revoke_agent",
+      "args": [
+        {
+          "name": "agent",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_agent_status",
+      "args": [
+        {
+          "name": "agent",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "Any",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "deposit",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": [
+        "Payable"
+      ]
+    }
+  ]
+}
