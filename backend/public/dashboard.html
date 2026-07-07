@@ -629,6 +629,8 @@ async function loadConfig() {
   $('ownerHash').textContent = short(CFG.ownerAccountHash, 12);
 }
 
+let _lastLogKey = null;
+
 async function refresh() {
   const [{ agent }, log] = await Promise.all([api('/api/status'), api('/api/log')]);
   const badge = $('agentStatus');
@@ -648,6 +650,11 @@ async function refresh() {
   $('allowed').textContent = agent?.allowedAction || '—';
 
   const el = $('log');
+  // ponytail: key on hash+status of each entry — skip DOM write if nothing changed
+  const logKey = log.map(e => e.deployHash + e.status).join('|');
+  if (logKey === _lastLogKey) return;
+  _lastLogKey = logKey;
+
   if (!log.length) {
     el.innerHTML = `<div class="empty"><div class="empty-icon">◎</div><div class="empty-title">No actions yet</div><div class="empty-body">Register an agent and attempt a transfer. Every action produces a real deploy hash verifiable on the Casper explorer.</div></div>`;
     return;
