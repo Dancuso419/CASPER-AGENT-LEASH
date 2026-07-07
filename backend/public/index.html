@@ -3,447 +3,387 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Casper Agent Leash</title>
+<title>Agent Leash — Casper Testnet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
   :root {
-    --bg: #060810;
-    --bg2: #0b0f1a;
-    --panel: rgba(15, 20, 35, 0.8);
-    --panel-border: rgba(99, 102, 241, 0.15);
-    --panel-border-hover: rgba(99, 102, 241, 0.35);
-    --line: rgba(255,255,255,0.06);
-    --txt: #e2e8f7;
-    --txt2: #94a3b8;
-    --green: #22c55e;
-    --green-bg: rgba(34,197,94,0.08);
-    --green-border: rgba(34,197,94,0.25);
-    --red: #ef4444;
-    --red-bg: rgba(239,68,68,0.08);
-    --red-border: rgba(239,68,68,0.25);
-    --accent: #818cf8;
-    --accent2: #6366f1;
-    --amber: #f59e0b;
-    --amber-bg: rgba(245,158,11,0.08);
-    --glow: rgba(99,102,241,0.4);
+    --bg:           oklch(0.09 0 0);
+    --surface:      oklch(0.13 0.008 280);
+    --surface-2:    oklch(0.17 0.010 280);
+    --border:       oklch(0.22 0.008 280);
+    --border-s:     oklch(0.30 0.012 280);
+    --ink:          oklch(0.92 0.008 280);
+    --muted:        oklch(0.56 0.012 280);
+    --primary:      oklch(0.62 0.155 280);
+    --primary-h:    oklch(0.67 0.150 280);
+    --accent:       oklch(0.72 0.12 195);
+    --ok:           oklch(0.68 0.18 145);
+    --ok-bg:        oklch(0.14 0.04 145);
+    --ok-bd:        oklch(0.26 0.08 145);
+    --err:          oklch(0.65 0.20 25);
+    --err-bg:       oklch(0.14 0.04 25);
+    --err-bd:       oklch(0.26 0.08 25);
+    --warn:         oklch(0.72 0.15 75);
+    --warn-bg:      oklch(0.15 0.04 75);
+    --warn-bd:      oklch(0.28 0.08 75);
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
     background: var(--bg);
-    color: var(--txt);
+    color: var(--ink);
     font-family: 'Inter', system-ui, sans-serif;
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.5;
     min-height: 100vh;
-    overflow-x: hidden;
   }
 
-  /* Mesh background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99,102,241,0.12) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 40% at 80% 110%, rgba(139,92,246,0.08) 0%, transparent 60%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  code, .mono {
-    font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
-    font-size: 0.85em;
-  }
-
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.88em; }
   a { color: var(--accent); text-decoration: none; }
-  a:hover { color: #a5b4fc; text-decoration: underline; }
+  a:hover { text-decoration: underline; }
 
-  /* ── Header ── */
+  /* ─── Header ─── */
   header {
-    position: relative;
-    z-index: 10;
-    padding: 0 32px;
-    height: 64px;
+    height: 52px;
+    padding: 0 20px;
     display: flex;
     align-items: center;
     gap: 14px;
-    border-bottom: 1px solid var(--line);
-    background: rgba(6, 8, 16, 0.7);
-    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 
   .logo {
     display: flex;
     align-items: center;
+    gap: 9px;
+  }
+
+  .logo-mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    background: linear-gradient(135deg, var(--accent2), #7c3aed);
-    border-radius: 10px;
-    box-shadow: 0 0 16px rgba(99,102,241,0.5);
     flex-shrink: 0;
   }
 
-  .logo svg { width: 20px; height: 20px; }
+  .logo-mark svg { display: block; }
 
-  header h1 {
-    font-size: 18px;
+  .logo-name {
+    font-size: 14px;
     font-weight: 700;
-    letter-spacing: -0.3px;
-    background: linear-gradient(90deg, #e2e8f7 30%, var(--accent));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--ink);
+    letter-spacing: -0.2px;
   }
 
-  .net-badge {
+  .logo-name span { color: var(--muted); font-weight: 400; }
+
+  .vr {
+    width: 1px;
+    height: 18px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .net-tag {
     font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--amber);
-    background: var(--amber-bg);
-    border: 1px solid rgba(245,158,11,0.3);
-    padding: 3px 10px;
-    border-radius: 999px;
+    color: var(--warn);
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-bd);
+    padding: 2px 7px;
+    border-radius: 3px;
   }
 
-  .header-right {
+  .header-tail {
     margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 20px;
-  }
-
-  .contract-link {
+    gap: 18px;
     font-size: 12px;
-    color: var(--txt2);
+    color: var(--muted);
   }
 
-  .contract-link a { color: var(--accent); }
-
-  .gemini-pill {
+  .gemini-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--txt2);
-    background: var(--line);
-    border: 1px solid var(--panel-border);
-    border-radius: 999px;
-    padding: 4px 12px;
+    gap: 5px;
   }
 
-  .gemini-dot {
-    width: 7px; height: 7px;
+  .g-dot {
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: var(--green);
-    box-shadow: 0 0 6px var(--green);
-  }
-
-  /* ── Layout ── */
-  main {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    grid-template-columns: 360px 1fr;
-    gap: 20px;
-    padding: 24px 32px;
-    align-items: start;
-    max-width: 1400px;
-  }
-
-  .col { display: flex; flex-direction: column; gap: 16px; }
-
-  /* ── Cards ── */
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 16px;
-    padding: 20px;
-    backdrop-filter: blur(16px);
-    transition: border-color 0.2s;
-  }
-
-  .card:hover { border-color: var(--panel-border-hover); }
-
-  .card-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-
-  .card-icon {
-    width: 28px; height: 28px;
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px;
+    background: var(--muted);
     flex-shrink: 0;
   }
 
-  .card-icon.purple { background: rgba(99,102,241,0.15); }
-  .card-icon.green  { background: rgba(34,197,94,0.12); }
-  .card-icon.blue   { background: rgba(59,130,246,0.12); }
-  .card-icon.red    { background: rgba(239,68,68,0.12); }
+  .g-dot.live { background: var(--ok); }
 
-  .card h2 {
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--txt2);
+  /* ─── Layout ─── */
+  main {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    min-height: calc(100vh - 52px);
+    background: var(--border); /* hairline between columns */
+    gap: 1px;
   }
 
-  /* ── Data rows ── */
+  .col {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── Panel ─── */
+  .panel {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .panel:last-child { border-bottom: none; }
+
+  .phead {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  /* ─── Data rows ─── */
   .row {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 9px 0;
-    border-bottom: 1px solid var(--line);
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
     font-size: 13px;
   }
+
   .row:last-child { border-bottom: none; padding-bottom: 0; }
-  .row .k { color: var(--txt2); flex-shrink: 0; }
+  .row:first-child { padding-top: 0; }
+  .row .k { color: var(--muted); flex-shrink: 0; }
   .row .v { text-align: right; word-break: break-all; font-weight: 500; }
 
-  /* ── Status badge ── */
+  /* ─── Badge ─── */
   .badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
+    gap: 5px;
+    font-size: 11.5px;
     font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 999px;
+    padding: 2px 8px;
+    border-radius: 3px;
   }
 
-  .badge::before {
-    content: '';
-    width: 6px; height: 6px;
+  .bdot {
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     flex-shrink: 0;
   }
 
-  .badge.active {
-    color: var(--green);
-    background: var(--green-bg);
-    border: 1px solid var(--green-border);
-  }
-  .badge.active::before {
-    background: var(--green);
-    box-shadow: 0 0 6px var(--green);
-    animation: pulse-green 2s infinite;
-  }
+  .badge.active  { color: var(--ok);   background: var(--ok-bg);   border: 1px solid var(--ok-bd); }
+  .badge.revoked { color: var(--err);  background: var(--err-bg);  border: 1px solid var(--err-bd); }
+  .badge.none    { color: var(--muted);background: var(--surface-2);border: 1px solid var(--border); }
 
-  .badge.revoked {
-    color: var(--red);
-    background: var(--red-bg);
-    border: 1px solid var(--red-border);
-  }
-  .badge.revoked::before { background: var(--red); }
+  .badge.active .bdot  { background: var(--ok);  animation: blink 2.2s ease-in-out infinite; }
+  .badge.revoked .bdot { background: var(--err); }
+  .badge.none .bdot    { background: var(--muted); }
 
-  .badge.none {
-    color: var(--txt2);
-    background: rgba(148,163,184,0.08);
-    border: 1px solid rgba(148,163,184,0.15);
-  }
-  .badge.none::before { background: var(--txt2); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+  @media (prefers-reduced-motion: reduce) { .bdot { animation: none !important; } }
 
-  @keyframes pulse-green {
-    0%, 100% { box-shadow: 0 0 4px var(--green); opacity: 1; }
-    50% { box-shadow: 0 0 10px var(--green); opacity: 0.7; }
-  }
-
-  /* ── Cap bar ── */
-  .cap-display {
+  /* ─── Cap display ─── */
+  .cap-num {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-size: 24px;
-    font-weight: 700;
-    color: var(--txt);
-    margin: 4px 0 2px;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+    line-height: 1.2;
   }
 
-  .cap-sub { font-size: 12px; color: var(--txt2); }
+  .cap-sub { font-size: 12px; color: var(--muted); margin-top: 2px; margin-bottom: 14px; }
 
-  /* ── Inputs ── */
+  hr.thin { border: none; border-top: 1px solid var(--border); margin: 0 0 14px; }
+
+  /* ─── Form ─── */
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+
   label {
     font-size: 11px;
-    font-weight: 600;
-    color: var(--txt2);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    display: block;
-    margin-bottom: 6px;
+    font-weight: 500;
+    color: var(--muted);
   }
 
   input {
-    width: 100%;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid var(--line);
-    color: var(--txt);
-    border-radius: 10px;
-    padding: 9px 12px;
-    font-size: 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    border-radius: 5px;
+    padding: 7px 10px;
+    font-size: 13px;
     font-family: inherit;
-    transition: border-color 0.15s, box-shadow 0.15s;
     outline: none;
+    transition: border-color 0.12s;
+    width: 100%;
   }
 
-  input:focus {
-    border-color: var(--accent2);
-    box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
-  }
+  input:focus { border-color: var(--primary); }
 
-  .field { margin-bottom: 14px; }
-  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btns { display: flex; gap: 7px; flex-wrap: wrap; }
 
-  /* ── Buttons ── */
-  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
-
+  /* ─── Buttons ─── */
   button {
     cursor: pointer;
-    border: 1px solid var(--panel-border);
-    background: rgba(255,255,255,0.04);
-    color: var(--txt);
-    border-radius: 10px;
-    padding: 9px 16px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--ink);
+    border-radius: 5px;
+    padding: 7px 13px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     font-family: inherit;
-    transition: all 0.15s;
+    transition: background 0.10s, border-color 0.10s;
     outline: none;
-    white-space: nowrap;
   }
 
-  button:hover:not(:disabled) {
-    border-color: var(--accent);
-    background: rgba(99,102,241,0.1);
-    box-shadow: 0 0 12px rgba(99,102,241,0.2);
-  }
+  button:hover:not(:disabled) { background: oklch(0.21 0.012 280); border-color: var(--border-s); }
+  button.primary { background: var(--primary); border-color: transparent; color: oklch(1 0 0); font-weight: 600; }
+  button.primary:hover:not(:disabled) { background: var(--primary-h); }
+  button.danger { color: var(--err); border-color: var(--err-bd); background: transparent; }
+  button.danger:hover:not(:disabled) { background: var(--err-bg); }
+  button:disabled { opacity: 0.38; cursor: not-allowed; }
+  button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
-  button.primary {
-    background: linear-gradient(135deg, var(--accent2), #7c3aed);
-    border-color: transparent;
-    color: #fff;
-    box-shadow: 0 2px 12px rgba(99,102,241,0.35);
-  }
-
-  button.primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, #818cf8, #8b5cf6);
-    box-shadow: 0 4px 20px rgba(99,102,241,0.5);
-    transform: translateY(-1px);
-  }
-
-  button.danger {
-    color: var(--red);
-    border-color: rgba(239,68,68,0.25);
-  }
-
-  button.danger:hover:not(:disabled) {
-    background: rgba(239,68,68,0.08);
-    border-color: var(--red);
-    box-shadow: 0 0 12px rgba(239,68,68,0.2);
-  }
-
-  button:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
-
-  /* ── Status messages ── */
+  /* ─── Status line ─── */
   .status {
     font-size: 12px;
-    color: var(--amber);
+    color: var(--warn);
     min-height: 16px;
-    margin-top: 8px;
+    margin-top: 10px;
     display: flex;
     align-items: center;
     gap: 6px;
   }
 
-  .status.spinning::before {
-    content: '';
-    display: inline-block;
+  .spin {
     width: 10px; height: 10px;
-    border: 2px solid rgba(245,158,11,0.3);
-    border-top-color: var(--amber);
+    border: 1.5px solid oklch(0.72 0.15 75 / 0.25);
+    border-top-color: var(--warn);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── Prompt bar ── */
-  .prompt-wrap {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-  .prompt-wrap input { flex: 1; }
-
-  /* ── Reasoning box ── */
-  .reason {
-    background: rgba(99,102,241,0.06);
-    border: 1px solid rgba(99,102,241,0.2);
-    border-radius: 10px;
-    padding: 12px 14px;
-    font-size: 13px;
-    color: #c7d2fe;
-    margin-top: 12px;
-    line-height: 1.5;
-  }
-
-  /* ── Action log ── */
-  .log-wrap { max-height: 68vh; overflow-y: auto; padding-right: 2px; }
-
-  .log-wrap::-webkit-scrollbar { width: 4px; }
-  .log-wrap::-webkit-scrollbar-track { background: transparent; }
-  .log-wrap::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 4px; }
-
-  .entry {
-    display: flex;
-    gap: 14px;
-    padding: 14px;
-    border-radius: 12px;
-    margin-bottom: 8px;
-    border: 1px solid var(--line);
-    background: rgba(255,255,255,0.02);
-    transition: border-color 0.15s;
-  }
-
-  .entry:hover { border-color: var(--panel-border-hover); }
-  .entry:last-child { margin-bottom: 0; }
-
-  .entry.ok { border-left: 3px solid var(--green); }
-  .entry.blocked { border-left: 3px solid var(--red); }
-  .entry.pending { border-left: 3px solid var(--amber); }
-
-  .entry-icon {
-    width: 34px; height: 34px;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
+    animation: rotate 0.7s linear infinite;
     flex-shrink: 0;
   }
 
-  .entry.ok .entry-icon { background: var(--green-bg); }
-  .entry.blocked .entry-icon { background: var(--red-bg); }
-  .entry.pending .entry-icon { background: var(--amber-bg); }
+  @keyframes rotate { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; opacity: 0.7; } }
 
-  .entry-body { flex: 1; min-width: 0; }
+  /* ─── Prompt panel ─── */
+  .prompt-row { display: flex; gap: 8px; }
+  .prompt-row input { flex: 1; }
 
-  .entry-top {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 3px;
+  .reasoning {
+    margin-top: 12px;
+    padding: 11px 13px;
+    background: oklch(0.14 0.018 280);
+    border: 1px solid oklch(0.27 0.035 280);
+    border-radius: 5px;
+    font-size: 12.5px;
+    color: oklch(0.72 0.04 280);
+    line-height: 1.55;
   }
 
-  .entry-title {
+  /* ─── Log panel ─── */
+  .log-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .log-top {
+    padding: 14px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .log-legend {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .leg { display: flex; align-items: center; gap: 4px; }
+  .leg-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  .log-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 20px;
+  }
+
+  .log-scroll::-webkit-scrollbar { width: 4px; }
+  .log-scroll::-webkit-scrollbar-track { background: transparent; }
+  .log-scroll::-webkit-scrollbar-thumb { background: var(--border-s); border-radius: 4px; }
+
+  /* ─── Entry ─── */
+  .entry {
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 11px 13px;
+    margin-bottom: 7px;
+    transition: border-color 0.10s;
+  }
+
+  .entry:last-child { margin-bottom: 0; }
+  .entry:hover { border-color: var(--border-s); }
+
+  .entry.ok      { background: var(--ok-bg);   border-color: var(--ok-bd); }
+  .entry.blocked { background: var(--err-bg);  border-color: var(--err-bd); }
+  .entry.pending { background: var(--warn-bg); border-color: var(--warn-bd); }
+
+  .etop {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 5px;
+  }
+
+  .eicon {
+    font-size: 12px;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+  }
+
+  .entry.ok      .eicon { color: var(--ok); }
+  .entry.blocked .eicon { color: var(--err); }
+  .entry.pending .eicon { color: var(--warn); }
+
+  .etitle {
+    font-size: 13px;
     font-weight: 600;
-    font-size: 14px;
     flex: 1;
     min-width: 0;
     white-space: nowrap;
@@ -451,125 +391,86 @@
     text-overflow: ellipsis;
   }
 
-  .entry.ok .entry-title { color: var(--green); }
-  .entry.blocked .entry-title { color: var(--red); }
-  .entry.pending .entry-title { color: var(--amber); }
+  .entry.ok      .etitle { color: var(--ok); }
+  .entry.blocked .etitle { color: var(--err); }
+  .entry.pending .etitle { color: var(--warn); }
 
-  .entry-pill {
-    font-size: 11px;
+  .epill {
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 2px 8px;
-    border-radius: 999px;
+    letter-spacing: 0.04em;
+    padding: 1px 6px;
+    border-radius: 2px;
     flex-shrink: 0;
   }
 
-  .entry.ok .entry-pill {
-    color: var(--green);
-    background: var(--green-bg);
-    border: 1px solid var(--green-border);
-  }
+  .entry.ok      .epill { color: var(--ok);   background: oklch(0.22 0.07 145); }
+  .entry.blocked .epill { color: var(--err);  background: oklch(0.22 0.07 25); }
+  .entry.pending .epill { color: var(--warn); background: oklch(0.22 0.07 75); }
 
-  .entry.blocked .entry-pill {
-    color: var(--red);
-    background: var(--red-bg);
-    border: 1px solid var(--red-border);
-  }
+  .emeta { font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+  .ehash { font-size: 11.5px; }
+  .ehash a { color: var(--accent); }
 
-  .entry.pending .entry-pill {
-    color: var(--amber);
-    background: var(--amber-bg);
-    border: 1px solid rgba(245,158,11,0.25);
-  }
-
-  .entry-meta {
-    color: var(--txt2);
-    font-size: 12px;
-    margin-top: 2px;
-  }
-
-  .entry-hash {
-    font-size: 11.5px;
-    margin-top: 5px;
-  }
-
+  /* ─── Empty state ─── */
   .empty {
-    color: var(--txt2);
-    font-size: 13px;
+    padding: 28px 20px;
     text-align: center;
-    padding: 40px 20px;
-    border: 1px dashed var(--line);
-    border-radius: 12px;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
   }
 
-  .empty-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.5; }
-
-  /* ── Divider ── */
-  .divider {
-    height: 1px;
-    background: var(--line);
-    margin: 14px 0;
-  }
-
-  /* ── Section tag on log card ── */
-  .log-title-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .log-legend {
-    display: flex;
-    gap: 12px;
-    margin-left: auto;
-    font-size: 12px;
-  }
-
-  .leg { display: flex; align-items: center; gap: 5px; color: var(--txt2); }
-  .leg-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .empty strong { display: block; color: var(--ink); font-weight: 600; margin-bottom: 5px; }
 </style>
 </head>
 <body>
 
 <header>
   <div class="logo">
-    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-    </svg>
+    <div class="logo-mark">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M5.5 8.5a3 3 0 0 0 4.24.34l1.5-1.5A3 3 0 0 0 7 3.16L6 4.16" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M8.5 5.5a3 3 0 0 0-4.24-.34l-1.5 1.5A3 3 0 0 0 7 10.84l1-1" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="logo-name">AgentLeash <span>/ Casper</span></span>
   </div>
-  <h1>Casper Agent Leash</h1>
-  <span class="net-badge" id="net">testnet</span>
-  <div class="header-right">
-    <span class="contract-link" id="contractSub">loading…</span>
-    <span class="gemini-pill" id="geminiPill">
-      <span class="gemini-dot" id="geminiDot" style="background:var(--txt2);box-shadow:none"></span>
-      Gemini
-    </span>
+  <div class="vr"></div>
+  <span class="net-tag" id="net">testnet</span>
+  <div class="header-tail">
+    <div class="gemini-row">
+      <div class="g-dot" id="gDot"></div>
+      <span id="gLabel">Gemini</span>
+    </div>
+    <span id="contractSub">loading…</span>
   </div>
 </header>
 
 <main>
-  <!-- Left column -->
+
+  <!-- ── Left column ── -->
   <div class="col">
 
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon purple">🤖</div>
-        <h2>Agent Identity</h2>
-      </div>
+    <div class="panel">
+      <div class="phead">Agent Identity</div>
       <div class="row">
         <span class="k">Status</span>
-        <span class="v"><span id="agentStatus" class="badge none">unknown</span></span>
+        <span class="v">
+          <span id="agentStatus" class="badge none">
+            <span class="bdot"></span>unknown
+          </span>
+        </span>
       </div>
       <div class="row">
-        <span class="k">Agent key</span>
+        <span class="k">Agent</span>
         <span class="v mono" id="agentHash">—</span>
       </div>
       <div class="row">
-        <span class="k">Owner key</span>
+        <span class="k">Owner</span>
         <span class="v mono" id="ownerHash">—</span>
       </div>
       <div class="row">
@@ -578,99 +479,87 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon green">🔒</div>
-        <h2>Permission Rule</h2>
-      </div>
-      <div class="cap-display" id="cap">— CSPR</div>
-      <div class="cap-sub">Spending cap per transaction</div>
-      <div class="divider"></div>
-      <div class="row" style="border-bottom:none;padding-top:0">
+    <div class="panel">
+      <div class="phead">Permission Rule</div>
+      <div class="cap-num mono" id="cap">— CSPR</div>
+      <div class="cap-sub">maximum per transaction</div>
+      <hr class="thin" />
+      <div class="row" style="border:none;padding:0">
         <span class="k">Allowed action</span>
         <span class="v" id="allowed">—</span>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon blue">⚙️</div>
-        <h2>Owner Controls</h2>
-      </div>
+    <div class="panel">
+      <div class="phead">Owner Controls</div>
       <div class="two">
         <div class="field">
-          <label>Cap (CSPR)</label>
-          <input id="capIn" type="number" value="10" placeholder="e.g. 10" />
+          <label for="capIn">Spending cap (CSPR)</label>
+          <input id="capIn" type="number" value="10" />
         </div>
         <div class="field">
-          <label>Deposit (CSPR)</label>
-          <input id="depIn" type="number" value="100" placeholder="e.g. 100" />
+          <label for="depIn">Deposit amount (CSPR)</label>
+          <input id="depIn" type="number" value="100" />
         </div>
       </div>
       <div class="btns">
-        <button class="primary" data-act="register">Register Agent</button>
-        <button data-act="deposit">Fund Contract</button>
+        <button class="primary" data-act="register">Register agent</button>
+        <button data-act="deposit">Fund contract</button>
         <button class="danger" data-act="revoke">Revoke</button>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon red">⚡</div>
-        <h2>Agent Action</h2>
-      </div>
+    <div class="panel">
+      <div class="phead">Agent Action</div>
       <div class="two">
         <div class="field">
-          <label>Amount (CSPR)</label>
-          <input id="amtIn" type="number" value="5" placeholder="e.g. 5" />
+          <label for="amtIn">Amount (CSPR)</label>
+          <input id="amtIn" type="number" value="5" />
         </div>
         <div class="field">
-          <label>Recipient</label>
-          <input id="rcptIn" value="owner" placeholder="owner or address" />
+          <label for="rcptIn">Recipient</label>
+          <input id="rcptIn" value="owner" />
         </div>
       </div>
       <div class="btns">
-        <button class="primary" data-act="action">Attempt Transfer</button>
+        <button class="primary" data-act="action">Attempt transfer</button>
       </div>
       <div class="status" id="ctlStatus"></div>
     </div>
 
   </div>
 
-  <!-- Right column -->
+  <!-- ── Right column ── -->
   <div class="col">
 
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon purple">✨</div>
-        <h2>AI Agent Prompt — Gemini → On-chain</h2>
-      </div>
-      <div class="prompt-wrap">
-        <input id="promptIn" placeholder='e.g. "send 5 CSPR to the owner" or "what is my balance?"' />
-        <button class="primary" data-act="prompt">Ask Agent</button>
+    <div class="panel">
+      <div class="phead">AI Agent — Gemini → on-chain</div>
+      <div class="prompt-row">
+        <input id="promptIn" placeholder='"send 5 CSPR to the owner" or "what is my spending cap?"' />
+        <button class="primary" data-act="prompt">Run</button>
       </div>
       <div class="status" id="promptStatus"></div>
       <div id="reason"></div>
     </div>
 
-    <div class="card">
-      <div class="card-header log-title-row">
-        <div class="card-icon purple">📋</div>
-        <h2>Action Log — live on-chain verification</h2>
+    <div class="log-col">
+      <div class="log-top">
+        <span class="phead" style="margin:0">Action log — on-chain verified</span>
         <div class="log-legend">
-          <span class="leg"><span class="leg-dot" style="background:var(--green)"></span>Allowed</span>
-          <span class="leg"><span class="leg-dot" style="background:var(--red)"></span>Blocked</span>
+          <span class="leg"><span class="leg-dot" style="background:var(--ok)"></span>Allowed</span>
+          <span class="leg"><span class="leg-dot" style="background:var(--err)"></span>Blocked</span>
         </div>
       </div>
-      <div class="log-wrap" id="log">
+      <div class="log-scroll" id="log">
         <div class="empty">
-          <div class="empty-icon">📭</div>
-          No actions yet. Register an agent and attempt a transfer.
+          <strong>No actions yet</strong>
+          Register an agent and attempt a transfer. Each action produces a verifiable on-chain deploy hash.
         </div>
       </div>
     </div>
 
   </div>
+
 </main>
 
 <script>
@@ -689,10 +578,9 @@ async function loadConfig() {
   $('net').textContent = CFG.chainName;
   $('contractSub').innerHTML =
     `contract <a href="${CFG.explorerBase}/contract-package/${CFG.packageHash}" target="_blank" class="mono">${short(CFG.packageHash)}</a>`;
-  const gem = $('geminiDot');
   if (CFG.geminiEnabled) {
-    gem.style.background = 'var(--green)';
-    gem.style.boxShadow = '0 0 6px var(--green)';
+    $('gDot').classList.add('live');
+    $('gLabel').textContent = 'Gemini connected';
   }
   $('agentHash').textContent = short(CFG.agentAccountHash, 14);
   $('ownerHash').textContent = short(CFG.ownerAccountHash, 14);
@@ -701,35 +589,40 @@ async function loadConfig() {
 async function refresh() {
   const [{ agent }, log] = await Promise.all([api('/api/status'), api('/api/log')]);
   const badge = $('agentStatus');
-  if (!agent) { badge.className = 'badge none'; badge.textContent = 'not registered'; }
-  else if (agent.isActive) { badge.className = 'badge active'; badge.textContent = 'active'; }
-  else { badge.className = 'badge revoked'; badge.textContent = 'revoked'; }
+  if (!agent) {
+    badge.className = 'badge none';
+    badge.innerHTML = '<span class="bdot"></span>not registered';
+  } else if (agent.isActive) {
+    badge.className = 'badge active';
+    badge.innerHTML = '<span class="bdot"></span>active';
+  } else {
+    badge.className = 'badge revoked';
+    badge.innerHTML = '<span class="bdot"></span>revoked';
+  }
   $('createdAt').textContent = agent?.createdAt ? new Date(agent.createdAt).toLocaleString() : '—';
   $('cap').textContent = agent ? `${agent.spendingCapCspr} CSPR` : '— CSPR';
   $('allowed').textContent = agent?.allowedAction || '—';
 
   const el = $('log');
   if (!log.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>No actions yet. Register an agent and attempt a transfer.</div>';
+    el.innerHTML = '<div class="empty"><strong>No actions yet</strong>Register an agent and attempt a transfer. Each action produces a verifiable on-chain deploy hash.</div>';
     return;
   }
   el.innerHTML = log.map((e) => {
-    const cls = e.status === 'success' ? 'ok' : e.status === 'failure' ? 'blocked' : 'pending';
-    const icon = e.status === 'success' ? '✅' : e.status === 'failure' ? '🚫' : '⏳';
-    const pillText = e.status === 'success' ? 'Allowed' : e.status === 'failure' ? 'Blocked' : 'Pending';
-    const verb = e.type === 'transfer' ? 'Transfer' : e.type[0].toUpperCase() + e.type.slice(1);
-    const amt = e.amountCspr != null ? ` · ${e.amountCspr} CSPR` : '';
-    const errTag = e.errorName ? ` · <strong>${e.errorName}</strong>` : '';
+    const cls   = e.status === 'success' ? 'ok' : e.status === 'failure' ? 'blocked' : 'pending';
+    const icon  = e.status === 'success' ? '✓' : e.status === 'failure' ? '✕' : '○';
+    const pill  = e.status === 'success' ? 'Allowed' : e.status === 'failure' ? 'Blocked' : 'Pending';
+    const verb  = e.type === 'transfer' ? 'Transfer' : e.type[0].toUpperCase() + e.type.slice(1);
+    const amt   = e.amountCspr != null ? ` ${e.amountCspr} CSPR` : '';
+    const err   = e.errorName ? ` · ${e.errorName}` : '';
     return `<div class="entry ${cls}">
-      <div class="entry-icon">${icon}</div>
-      <div class="entry-body">
-        <div class="entry-top">
-          <div class="entry-title">${verb}${amt} — ${e.message}</div>
-          <span class="entry-pill">${pillText}</span>
-        </div>
-        <div class="entry-meta">${new Date(e.ts).toLocaleTimeString()}${errTag}</div>
-        <div class="entry-hash"><a href="${explorer(e.deployHash)}" target="_blank" class="mono">${short(e.deployHash, 12)} ↗</a></div>
+      <div class="etop">
+        <span class="eicon">${icon}</span>
+        <span class="etitle">${verb}${amt} — ${e.message}</span>
+        <span class="epill">${pill}</span>
       </div>
+      <div class="emeta">${new Date(e.ts).toLocaleTimeString()}${err}</div>
+      <div class="ehash mono"><a href="${explorer(e.deployHash)}" target="_blank">${short(e.deployHash, 14)} ↗</a></div>
     </div>`;
   }).join('');
 }
@@ -737,8 +630,7 @@ async function refresh() {
 function busy(on, msg = '') {
   document.querySelectorAll('button').forEach((b) => b.disabled = on);
   const st = $('ctlStatus');
-  st.textContent = on ? (msg || 'Submitting to Casper testnet…') : '';
-  st.className = on ? 'status spinning' : 'status';
+  st.innerHTML = on ? `<span class="spin"></span>${msg || 'Submitting to Casper testnet…'}` : '';
 }
 
 async function act(name) {
@@ -746,17 +638,15 @@ async function act(name) {
     if (name === 'prompt') return runPrompt();
     busy(true);
     let path, body;
-    if (name === 'register')      { path = '/api/register'; body = { spendingCapCspr: +$('capIn').value }; }
-    else if (name === 'deposit')  { path = '/api/deposit';  body = { amountCspr: +$('depIn').value }; }
-    else if (name === 'revoke')   { path = '/api/revoke';   body = {}; }
-    else if (name === 'action')   { path = '/api/action';   body = { amountCspr: +$('amtIn').value, recipient: $('rcptIn').value }; }
-    $('ctlStatus').textContent = 'Waiting for on-chain execution (~15–40s)…';
-    $('ctlStatus').className = 'status spinning';
+    if (name === 'register')     { path = '/api/register'; body = { spendingCapCspr: +$('capIn').value }; }
+    else if (name === 'deposit') { path = '/api/deposit';  body = { amountCspr: +$('depIn').value }; }
+    else if (name === 'revoke')  { path = '/api/revoke';   body = {}; }
+    else if (name === 'action')  { path = '/api/action';   body = { amountCspr: +$('amtIn').value, recipient: $('rcptIn').value }; }
+    $('ctlStatus').innerHTML = '<span class="spin"></span>Waiting for on-chain execution (~15–40 s)…';
     await api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     await refresh();
   } catch (e) {
     $('ctlStatus').textContent = 'Error: ' + e.message;
-    $('ctlStatus').className = 'status';
   } finally {
     busy(false);
   }
@@ -767,21 +657,25 @@ async function runPrompt() {
   if (!msg) return;
   document.querySelectorAll('button').forEach((b) => b.disabled = true);
   const ps = $('promptStatus');
-  ps.textContent = 'Agent is reasoning, then acting on-chain…';
-  ps.className = 'status spinning';
+  ps.innerHTML = '<span class="spin"></span>Reasoning, then acting on-chain…';
   $('reason').innerHTML = '';
   try {
-    const res = await api('/api/prompt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
-    if (res.error) { ps.textContent = 'Error: ' + res.error; ps.className = 'status'; }
-    else {
-      ps.className = 'status';
-      ps.textContent = res.tool ? `Agent chose: ${res.tool.name}(${JSON.stringify(res.tool.args)})` : 'No tool call.';
-      if (res.reasoning) $('reason').innerHTML = `<div class="reason">💭 ${res.reasoning}</div>`;
+    const res = await api('/api/prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg }),
+    });
+    if (res.error) {
+      ps.textContent = 'Error: ' + res.error;
+    } else {
+      ps.textContent = res.tool
+        ? `→ ${res.tool.name}(${JSON.stringify(res.tool.args)})`
+        : 'No tool call.';
+      if (res.reasoning) $('reason').innerHTML = `<div class="reasoning">${res.reasoning}</div>`;
     }
     await refresh();
   } catch (e) {
     ps.textContent = 'Error: ' + e.message;
-    ps.className = 'status';
   } finally {
     document.querySelectorAll('button').forEach((b) => b.disabled = false);
   }
