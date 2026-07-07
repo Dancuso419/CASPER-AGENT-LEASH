@@ -50,8 +50,10 @@ export async function reason(userMessage) {
     config: { systemInstruction: SYSTEM, tools },
   });
   const calls = response.functionCalls || [];
+  // The .text getter logs a warning when the response contains a functionCall part,
+  // and returns '' anyway — only read it when the model replied with plain prose.
   return {
-    text: response.text || '',
+    text: calls.length ? '' : (response.text || ''),
     call: calls[0] ? { name: calls[0].name, args: calls[0].args || {} } : null,
   };
 }

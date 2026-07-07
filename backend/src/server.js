@@ -176,12 +176,24 @@ app.post('/api/prompt', async (req, res) => {
         amountMotes,
         recipient,
       });
-      return res.json({ reasoning: decision.text, tool: decision.call, result });
+      // Gemini returns no prose alongside a function call, so synthesize a reasoning
+      // line that ties the AI's decision to the actual on-chain enforcement outcome.
+      const { recipient: rcpt, amount_cspr } = decision.call.args;
+      const outcome = result.allowed
+        ? `the on-chain leash allowed it — ${amount_cspr} CSPR moved`
+        : `the on-chain leash blocked it (${result.exec?.errorName || 'enforcement triggered'}) — 0 CSPR moved`;
+      const reasoning = decision.text ||
+        `Interpreted this as a transfer of ${amount_cspr} CSPR to the ${rcpt}. Submitted to the contract, and ${outcome}.`;
+      return res.json({ reasoning, tool: decision.call, result });
     }
     if (decision.call?.name === 'check_status') {
-      return res.json({ reasoning: decision.text, tool: decision.call, status: store.getAgent(config.agentAccountHash) });
+      const agent = store.getAgent(config.agentAccountHash);
+      const reasoning = decision.text || (agent
+        ? `Checked on-chain status: the agent is ${agent.isActive ? 'active' : 'revoked'} with a ${agent.spendingCapCspr} CSPR spending cap.`
+        : `Checked on-chain status: no agent is registered yet.`);
+      return res.json({ reasoning, tool: decision.call, status: agent });
     }
-    res.json({ reasoning: decision.text, tool: null });
+    res.json({ reasoning: decision.text || 'No on-chain action matched that request.', tool: null });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
   }
