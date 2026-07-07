@@ -39,17 +39,26 @@ async function runAction({ type, submit, amountMotes, recipient }) {
   return { allowed, deployHash, explorer: explorer(deployHash), exec, row };
 }
 
-app.get('/api/health', (_req, res) => {
-  import('node:fs').then(({ existsSync }) => {
-    res.json({
-      ownerKeyExists:  existsSync(config.ownerKey),
-      agentKeyExists:  existsSync(config.agentKey),
-      proxyWasmExists: existsSync(config.proxyWasm),
-      ownerKeyPath:    config.ownerKey,
-      agentKeyPath:    config.agentKey,
-      agentAccountHash: config.agentAccountHash,
-      ownerAccountHash: config.ownerAccountHash,
-    });
+app.get('/api/health', async (_req, res) => {
+  const { existsSync } = await import('node:fs');
+  const { execFile } = await import('node:child_process');
+  const out = {
+    casperBin:       config.casperBin,
+    casperBinExists: existsSync(config.casperBin),
+    ownerKeyExists:  existsSync(config.ownerKey),
+    agentKeyExists:  existsSync(config.agentKey),
+    proxyWasmExists: existsSync(config.proxyWasm),
+    ownerKeyPath:    config.ownerKey,
+    agentKeyPath:    config.agentKey,
+    proxyWasmPath:   config.proxyWasm,
+    agentAccountHash: config.agentAccountHash,
+    ownerAccountHash: config.ownerAccountHash,
+    cwd: process.cwd(),
+  };
+  // Actually try to run the binary — the definitive test.
+  execFile(config.casperBin, ['--version'], (err, stdout) => {
+    out.casperVersion = err ? `SPAWN FAILED: ${err.message}` : stdout.trim();
+    res.json(out);
   });
 });
 

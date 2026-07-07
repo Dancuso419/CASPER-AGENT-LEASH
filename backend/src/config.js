@@ -2,8 +2,22 @@ import 'dotenv/config';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const home = os.homedir();
+// backend/ dir, resolved relative to this file — works wherever Render checks out the repo.
+const backendDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// Pick the casper-client binary: explicit env > bundled Linux binary in repo > PATH.
+function resolveCasperBin() {
+  if (process.env.CASPER_CLIENT) return process.env.CASPER_CLIENT;
+  const bundled = path.join(backendDir, 'casper-client-linux');
+  if (fs.existsSync(bundled)) {
+    try { fs.chmodSync(bundled, 0o755); } catch { /* best effort */ }
+    return bundled;
+  }
+  return 'casper-client'; // fall back to PATH (local dev)
+}
 
 // Cloud deployment (Render): write key content from env vars to temp files on startup
 if (process.env.OWNER_KEY_CONTENT) {
@@ -31,8 +45,8 @@ export const config = {
   agentAccountHash:
     process.env.AGENT_ACCOUNT_HASH ||
     'account-hash-6bd38f839796576f2a9f3ce3721697519f3f24d21f455755c084ed71d69c2d68',
-  proxyWasm: process.env.PROXY_WASM || path.join(home, 'proxy_caller.wasm'),
-  casperBin: process.env.CASPER_CLIENT || 'casper-client',
+  proxyWasm: process.env.PROXY_WASM || path.join(backendDir, 'proxy_caller.wasm'),
+  casperBin: resolveCasperBin(),
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   explorerBase: 'https://testnet.cspr.live',
 };
