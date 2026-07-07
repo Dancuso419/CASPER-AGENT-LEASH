@@ -619,11 +619,12 @@ async function api(path, opts) {
 
 async function loadConfig() {
   CFG = await api('/api/config');
-  $('net').textContent = CFG.chainName;
+  const net = $('net'); if (net) net.textContent = CFG.chainName;
   const cl = $('contractLink');
-  cl.href = `${CFG.explorerBase}/contract-package/${CFG.packageHash}`;
-  cl.textContent = short(CFG.packageHash, 10);
-  if (CFG.geminiEnabled) { $('gDot').classList.add('live'); $('gLabel').textContent = 'Gemini connected'; }
+  if (cl) {
+    cl.href = `${CFG.explorerBase}/contract-package/${CFG.packageHash}`;
+    cl.textContent = short(CFG.packageHash, 10);
+  }
   $('agentHash').textContent = short(CFG.agentAccountHash, 12);
   $('ownerHash').textContent = short(CFG.ownerAccountHash, 12);
 }
