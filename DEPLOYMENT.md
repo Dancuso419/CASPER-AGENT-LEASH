@@ -63,6 +63,16 @@ re-run interactively:
 - Same contract/purse. Backend runs the identical `register → check_and_execute → revoke` calls;
   verified allowed (5 CSPR) and Gemini-driven blocked (50 CSPR → ExceedsCap) on-chain.
 
+## Dashboard demo agent (agent3) — current live Render deployment
+
+agent2 was already registered on-chain (AlreadyRegistered on re-register), so a fresh
+**agent3** drives the hosted demo, allowing a clean register → allowed → blocked → revoke run:
+
+- agent3 pubkey `018cbbcc847c36d1769eabc3a70ee0d746f7d9620c02840d9a34e4b2e581cb2d8c`
+- agent3 account-hash `account-hash-7c6ca4889d689c521b175255f7c6a678c44d7aac9b9abbe5ea9f656aba05f66a`
+- Gas funded: owner → agent3 50 CSPR, deploy `7592fe6063039fdf4ee359177b0bb88ecf4deffe8d7b2a84b5dc02c81f7f5ed8`
+- Keys in WSL `~/casper-keys/agent3/`; Render env uses `AGENT_KEY_B64` + `AGENT_ACCOUNT_HASH`.
+
 ## Prior on-chain activity
 
 - Owner funded with 3000 CSPR (user transfer from wallet)
