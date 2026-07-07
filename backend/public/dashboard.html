@@ -372,13 +372,18 @@ button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* ── Responsive — mobile ── */
 @media (max-width: 600px) {
-  body { padding-top: 68px; }
-  .header { top: 8px; width: calc(100% - 20px); height: 44px; padding: 0 8px 0 10px; gap: 8px; }
+  body { padding-top: 88px; }
+  .header { top: 10px; width: calc(100% - 24px); height: 62px; padding: 0 10px 0 14px; gap: 10px; }
   .header-mid, .g-status, .sep { display: none; }
+  .logo-mark { width: 36px; height: 36px; }
+  .logo-name { font-size: 16px; }
+  .net-badge { font-size: 12px; padding: 4px 12px; }
+  .back-btn { font-size: 14px; padding: 10px 18px; min-height: 42px; border-radius: 999px; }
+  .tour-btn { font-size: 14px; padding: 10px 18px; min-height: 42px; border-radius: 999px; }
   .app {
     grid-template-columns: 1fr;
     grid-template-areas: "info" "controls" "log";
-    height: auto; min-height: calc(100vh - 68px);
+    height: auto; min-height: calc(100vh - 88px);
     margin: 0 10px 10px;
   }
   .pane-controls { border-right: none; border-top: var(--bw) solid var(--ink); border-bottom: var(--bw) solid var(--ink); }
