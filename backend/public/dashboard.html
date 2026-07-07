@@ -612,7 +612,9 @@ const explorerUrl = h => `${CFG.explorerBase}/deploy/${h}`;
 
 async function api(path, opts) {
   const r = await fetch(path, opts);
-  return r.json();
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || `Server error ${r.status}`);
+  return data;
 }
 
 async function loadConfig() {
@@ -663,26 +665,40 @@ async function refresh() {
   }).join('');
 }
 
-function busy(on, msg) {
+function busy(on) {
   document.querySelectorAll('button[data-act]').forEach(b => b.disabled = on);
-  $('ctlStatus').innerHTML = on ? `<span class="spin"></span>${msg || 'Submitting to Casper testnet…'}` : '';
+}
+
+function setStatus(msg, isError = false) {
+  const el = $('ctlStatus');
+  if (!msg) { el.innerHTML = ''; return; }
+  el.style.color = isError ? 'var(--err)' : 'var(--warn)';
+  el.innerHTML = isError ? msg : `<span class="spin"></span>${msg}`;
 }
 
 async function act(name) {
   if (name === 'prompt') return runPrompt();
+  let errored = false;
   try {
     busy(true);
+    setStatus('Submitting to Casper testnet…');
     let path, body;
     if      (name === 'register') { path = '/api/register'; body = { spendingCapCspr: +$('capIn').value }; }
     else if (name === 'deposit')  { path = '/api/deposit';  body = { amountCspr: +$('depIn').value }; }
     else if (name === 'revoke')   { path = '/api/revoke';   body = {}; }
     else if (name === 'action')   { path = '/api/action';   body = { amountCspr: +$('amtIn').value, recipient: $('rcptIn').value }; }
-    $('ctlStatus').innerHTML = '<span class="spin"></span>Waiting for on-chain execution (~15–40s)…';
+    setStatus('Waiting for on-chain execution (~15–40s)…');
     await api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    setStatus('');
     await refresh();
   } catch(e) {
-    $('ctlStatus').textContent = 'Error: ' + e.message;
-  } finally { busy(false); }
+    errored = true;
+    setStatus('Error: ' + e.message, true);
+  } finally {
+    busy(false);
+    // keep error message visible — only clear on next action
+    if (!errored) setStatus('');
+  }
 }
 
 async function runPrompt() {
