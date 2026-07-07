@@ -19,12 +19,20 @@ function resolveCasperBin() {
   return 'casper-client'; // fall back to PATH (local dev)
 }
 
-// Cloud deployment (Render): write key content from env vars to temp files on startup
+// Cloud deployment (Render): write key content from env vars to temp files on startup.
+// Env vars store PEM newlines as literal "\n"; convert back to real line breaks,
+// strip surrounding quotes, and ensure a trailing newline (casper-client is strict).
+function normalizePem(raw) {
+  let pem = raw.trim().replace(/^["']|["']$/g, ''); // strip wrapping quotes if present
+  pem = pem.replace(/\\n/g, '\n');                  // literal \n -> real newline
+  if (!pem.endsWith('\n')) pem += '\n';
+  return pem;
+}
 if (process.env.OWNER_KEY_CONTENT) {
-  fs.writeFileSync('/tmp/owner_key.pem', process.env.OWNER_KEY_CONTENT, { mode: 0o600 });
+  fs.writeFileSync('/tmp/owner_key.pem', normalizePem(process.env.OWNER_KEY_CONTENT), { mode: 0o600 });
 }
 if (process.env.AGENT_KEY_CONTENT) {
-  fs.writeFileSync('/tmp/agent_key.pem', process.env.AGENT_KEY_CONTENT, { mode: 0o600 });
+  fs.writeFileSync('/tmp/agent_key.pem', normalizePem(process.env.AGENT_KEY_CONTENT), { mode: 0o600 });
 }
 
 // Defaults match the live testnet deployment recorded in DEPLOYMENT.md.
