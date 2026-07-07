@@ -103,7 +103,7 @@ app.post('/api/register', async (req, res) => {
   try {
     const cap = Number(req.body.spendingCapCspr ?? 10);
     const capMotes = csprToMotes(cap);
-    const result = await runAction({
+    let result = await runAction({
       type: 'register',
       submit: () => casper.registerAgent(config.agentAccountHash, capMotes),
     });
