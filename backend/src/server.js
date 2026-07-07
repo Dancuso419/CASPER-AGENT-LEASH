@@ -39,6 +39,20 @@ async function runAction({ type, submit, amountMotes, recipient }) {
   return { allowed, deployHash, explorer: explorer(deployHash), exec, row };
 }
 
+app.get('/api/health', (_req, res) => {
+  import('node:fs').then(({ existsSync }) => {
+    res.json({
+      ownerKeyExists:  existsSync(config.ownerKey),
+      agentKeyExists:  existsSync(config.agentKey),
+      proxyWasmExists: existsSync(config.proxyWasm),
+      ownerKeyPath:    config.ownerKey,
+      agentKeyPath:    config.agentKey,
+      agentAccountHash: config.agentAccountHash,
+      ownerAccountHash: config.ownerAccountHash,
+    });
+  });
+});
+
 app.get('/api/config', (_req, res) => {
   res.json({
     nodeAddress: config.nodeAddress,

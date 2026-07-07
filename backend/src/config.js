@@ -30,7 +30,7 @@ export const config = {
     'account-hash-104a19bb2e3b5f0db350c28d6941308d33c6134e4eb2fb246cc84b855b054dc3',
   agentAccountHash:
     process.env.AGENT_ACCOUNT_HASH ||
-    'account-hash-f6bb58c04d779cdbd02c6d89fdcdb24f09eb0dea13bb8a62258990203acf33f3',
+    'account-hash-6bd38f839796576f2a9f3ce3721697519f3f24d21f455755c084ed71d69c2d68',
   proxyWasm: process.env.PROXY_WASM || path.join(home, 'proxy_caller.wasm'),
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   explorerBase: 'https://testnet.cspr.live',
