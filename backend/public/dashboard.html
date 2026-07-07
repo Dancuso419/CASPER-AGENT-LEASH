@@ -413,11 +413,23 @@ button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   .sec { padding: 14px 14px 16px; }
   .cap-num { font-size: 26px; }
 
-  /* Tour card */
-  .tour-card { width: calc(100vw - 28px); padding: 18px 16px 14px; }
-  .tour-overlay.centered .tour-card { width: calc(100vw - 28px); }
+  /* Tour card — bottom sheet on mobile, overrides ALL JS-set positions */
+  .tour-card {
+    position: fixed !important;
+    left: 12px !important; right: 12px !important;
+    bottom: 16px !important; top: auto !important;
+    width: auto !important; transform: none !important;
+    padding: 18px 16px 14px;
+    max-height: 52vh; overflow-y: auto;
+  }
+  /* centered class loses meaning on mobile — same bottom sheet */
+  .tour-overlay.centered .tour-card {
+    left: 12px !important; right: 12px !important;
+    bottom: 16px !important; top: auto !important;
+    transform: none !important; width: auto !important;
+  }
   .tour-title { font-size: 15px; }
-  .tour-body  { font-size: 12.5px; }
+  .tour-body  { font-size: 12.5px; margin-bottom: 14px; }
 }
 </style>
 </head>
@@ -735,8 +747,10 @@ function showStep() {
   overlay.classList.remove('centered');
   const el = document.querySelector(s.target);
   if (!el) return;
-  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  requestAnimationFrame(() => {
+  const isMobile = window.innerWidth <= 600;
+  el.scrollIntoView({ behavior: 'smooth', block: isMobile ? 'center' : 'nearest' });
+  // Give scroll time to settle before measuring position
+  setTimeout(() => {
     const r = el.getBoundingClientRect();
     spotlight.style.display = 'block';
     spotlight.style.top    = (r.top    - 6) + 'px';
@@ -744,14 +758,14 @@ function showStep() {
     spotlight.style.width  = (r.width  + 12) + 'px';
     spotlight.style.height = (r.height + 12) + 'px';
     positionCard(el);
-  });
+  }, isMobile ? 320 : 0);
 }
 
 function startTour() {
   step = 0;
   $('tourOverlay').classList.add('active');
   $('tourOverlay').removeAttribute('aria-hidden');
-  document.body.style.overflow = 'hidden';
+  if (window.innerWidth > 600) document.body.style.overflow = 'hidden';
   showStep();
 }
 
