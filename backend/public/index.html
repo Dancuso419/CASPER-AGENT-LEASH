@@ -3,898 +3,651 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Leash — Casper Testnet</title>
+<title>Leash — AI Agent Permission Enforcement on Casper</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* ── Tokens ── */
 :root {
-  --bg:        oklch(0.09 0.000 0);
-  --surface:   oklch(0.13 0.005 35);
-  --surface-2: oklch(0.17 0.008 35);
-  --border:    oklch(0.21 0.005 35);
-  --border-s:  oklch(0.29 0.008 35);
-  --ink:       oklch(0.92 0.008 35);
-  --muted:     oklch(0.54 0.010 35);
-  --primary:   oklch(0.68 0.133 35.8);
-  --primary-h: oklch(0.73 0.130 35);
-  --accent:    oklch(0.68 0.12 200);
-  --ok:        oklch(0.68 0.18 145);
-  --ok-bg:     oklch(0.14 0.04 145);
-  --ok-bd:     oklch(0.26 0.08 145);
-  --err:       oklch(0.62 0.22 10);
-  --err-bg:    oklch(0.14 0.05 10);
-  --err-bd:    oklch(0.25 0.09 10);
-  --warn:      oklch(0.72 0.15 75);
-  --warn-bg:   oklch(0.15 0.04 75);
-  --warn-bd:   oklch(0.28 0.08 75);
-  --r: 5px;
+  --bg:      #F8F8F3;
+  --white:   #FFFFFF;
+  --ink:     #0D0D0D;
+  --muted:   #5A5A5A;
+  --primary: #E8622A;
+  --primary-d: #C44F1A;
+  --ok:      #16A34A;
+  --err:     #DC2626;
+  --bw:      2px;
+  --sh:      4px 4px 0 #0D0D0D;
+  --sh-lg:   6px 6px 0 #0D0D0D;
+  --sh-sm:   2px 2px 0 #0D0D0D;
+  --r:       4px;
 }
 
-/* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { height: 100%; }
+
 body {
   background: var(--bg);
   color: var(--ink);
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  min-height: 100%;
-  padding-top: 72px; /* floating pill: 48px height + 12px top + 12px gap */
+  padding-top: 80px;
 }
-.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.875em; }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
 
-/* ── Floating pill header ── */
-.header {
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ── Floating pill nav ── */
+.nav {
   position: fixed;
-  top: 12px;
+  top: 14px;
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 32px);
-  max-width: 1440px;
-  height: 48px;
+  max-width: 1100px;
+  height: 52px;
   border-radius: 999px;
-  background: oklch(0.13 0.005 35 / 0.88);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-s);
-  box-shadow: 0 4px 28px oklch(0 0 0 / .55), inset 0 1px 0 oklch(1 1 1 / .04);
-  z-index: 20;
-  padding: 0 14px 0 10px;
+  background: var(--white);
+  border: var(--bw) solid var(--ink);
+  box-shadow: var(--sh);
+  z-index: 50;
+  padding: 0 8px 0 16px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
-.logo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.logo-mark {
-  width: 28px; height: 28px;
+
+.nav-logo {
+  display: flex; align-items: center; gap: 9px; flex-shrink: 0;
+  text-decoration: none; color: var(--ink);
+}
+
+.nav-mark {
+  width: 30px; height: 30px;
   border-radius: 50%;
   background: var(--primary);
+  border: var(--bw) solid var(--ink);
   display: grid; place-items: center;
   flex-shrink: 0;
 }
-.logo-name { font-size: 14px; font-weight: 700; letter-spacing: -0.2px; }
-.logo-name em { font-style: normal; color: var(--muted); font-weight: 400; }
-.sep { width: 1px; height: 16px; background: var(--border-s); flex-shrink: 0; }
-.net-badge {
-  font-size: 11px; font-weight: 600;
-  color: var(--warn); background: var(--warn-bg);
-  border: 1px solid var(--warn-bd);
-  padding: 2px 8px; border-radius: 999px; flex-shrink: 0;
-}
-.header-mid {
-  flex: 1; min-width: 0; overflow: hidden;
-  display: flex; align-items: center; gap: 7px;
-  font-size: 12px; color: var(--muted);
-}
-.header-end { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.g-status { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
-.g-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
-.g-dot.live { background: var(--ok); }
 
-/* Tour trigger */
-.tour-btn {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12px; font-weight: 500;
-  color: var(--muted); background: oklch(0.18 0.008 35 / .8);
-  border: 1px solid var(--border-s); border-radius: 999px;
-  padding: 5px 12px; cursor: pointer;
-  font-family: inherit; outline: none;
-  transition: color .12s, border-color .12s, background .12s;
+.nav-name { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+
+.nav-badge {
+  font-size: 11px; font-weight: 700;
+  background: #FEF3C7; color: #92400E;
+  border: var(--bw) solid var(--ink);
+  padding: 2px 9px; border-radius: 999px;
   flex-shrink: 0;
 }
-.tour-btn:hover { color: var(--ink); border-color: oklch(0.42 0.010 35); background: oklch(0.22 0.010 35); }
-.tour-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
-/* ── 3-col grid ── */
-.app {
+.nav-spacer { flex: 1; }
+
+.nav-link {
+  font-size: 13px; font-weight: 600; color: var(--muted);
+  text-decoration: none; padding: 0 10px;
+  transition: color .12s;
+}
+.nav-link:hover { color: var(--ink); }
+
+.nav-cta {
+  background: var(--primary);
+  color: #fff;
+  border: var(--bw) solid var(--ink);
+  border-radius: 999px;
+  padding: 8px 20px;
+  font-size: 13px; font-weight: 700;
+  font-family: inherit; cursor: pointer;
+  box-shadow: var(--sh-sm);
+  text-decoration: none;
+  transition: transform .1s, box-shadow .1s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.nav-cta:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }
+.nav-cta:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
+
+/* ── Sections ── */
+section { padding: 80px 24px; }
+.container { max-width: 1100px; margin: 0 auto; }
+
+/* ── Hero ── */
+.hero {
+  background: var(--bg);
+  padding: 96px 24px 80px;
+  border-bottom: var(--bw) solid var(--ink);
+}
+
+.hero-inner {
+  max-width: 1100px; margin: 0 auto;
   display: grid;
-  grid-template-columns: 248px 288px 1fr;
-  grid-template-areas: "info controls log";
-  height: calc(100vh - 72px);
-  background: var(--border);
-  gap: 1px;
+  grid-template-columns: 1fr 420px;
+  gap: 64px;
+  align-items: center;
+}
+
+.hero-heading {
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.0;
+  color: var(--ink);
+  margin-bottom: 24px;
+  text-wrap: balance;
+}
+
+.hero-heading span {
+  color: var(--primary);
+  display: inline-block;
+  position: relative;
+}
+
+.hero-heading span::after {
+  content: '';
+  position: absolute;
+  bottom: 4px; left: 0; right: 0;
+  height: var(--bw);
+  background: var(--primary);
+}
+
+.hero-sub {
+  font-size: 18px; font-weight: 500; color: var(--muted);
+  line-height: 1.6; max-width: 52ch;
+  margin-bottom: 36px;
+}
+
+.hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  padding: 13px 24px;
+  font-size: 15px; font-weight: 700;
+  font-family: inherit; cursor: pointer;
+  text-decoration: none;
+  transition: transform .1s, box-shadow .1s;
+  line-height: 1;
+}
+
+.btn-primary {
+  background: var(--primary); color: #fff;
+  box-shadow: var(--sh);
+}
+.btn-primary:hover { transform: translate(-2px, -2px); box-shadow: var(--sh-lg); }
+.btn-primary:active { transform: translate(2px, 2px); box-shadow: none; }
+
+.btn-ghost {
+  background: var(--white); color: var(--ink);
+  box-shadow: var(--sh-sm);
+}
+.btn-ghost:hover { transform: translate(-2px, -2px); box-shadow: var(--sh); }
+.btn-ghost:active { transform: translate(2px, 2px); box-shadow: none; }
+
+/* Terminal demo card */
+.demo-card {
+  background: var(--ink);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh-lg);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.demo-bar {
+  background: #1A1A1A;
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 7px;
+  border-bottom: 1px solid #2A2A2A;
+}
+
+.demo-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+.demo-body {
+  padding: 24px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 2;
+}
+
+.demo-line { display: flex; gap: 12px; }
+.demo-label { color: #666; min-width: 160px; flex-shrink: 0; }
+.demo-val { color: #E8E8E8; }
+.demo-ok   { color: #4ADE80; font-weight: 700; }
+.demo-fail { color: #F87171; font-weight: 700; }
+.demo-sep { border: none; border-top: 1px solid #2A2A2A; margin: 12px 0; }
+.demo-caption { color: #555; font-size: 11px; margin-top: 12px; }
+
+/* ── How it works ── */
+.how {
+  background: var(--white);
+  border-top: var(--bw) solid var(--ink);
+  border-bottom: var(--bw) solid var(--ink);
+}
+
+.section-title {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.06em; color: var(--primary);
+  margin-bottom: 12px;
+}
+
+.section-heading {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 900; letter-spacing: -0.03em;
+  line-height: 1.1; margin-bottom: 48px;
+  text-wrap: balance;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh-lg);
   overflow: hidden;
 }
-.pane-info     { grid-area: info;     overflow-y: auto; background: var(--bg); }
-.pane-controls { grid-area: controls; overflow-y: auto; background: var(--bg); }
-.pane-log      { grid-area: log;      display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
 
-/* scrollbar */
-.pane-info, .pane-controls {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-s) transparent;
-}
-.pane-info::-webkit-scrollbar,
-.pane-controls::-webkit-scrollbar { width: 4px; }
-.pane-info::-webkit-scrollbar-thumb,
-.pane-controls::-webkit-scrollbar-thumb { background: var(--border-s); border-radius: 4px; }
-
-/* ── Section ── */
-.sec { padding: 18px 18px 20px; border-bottom: 1px solid var(--border); }
-.sec:last-child { border-bottom: none; }
-.sec-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px; }
-.sec-title { font-size: 13px; font-weight: 600; color: var(--ink); }
-.sec-sub   { font-size: 11px; color: var(--muted); }
-
-/* ── Data rows ── */
-.drow {
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 10px; padding: 7px 0;
-  border-bottom: 1px solid var(--border); font-size: 12.5px;
-}
-.drow:first-child { padding-top: 0; }
-.drow:last-child  { border-bottom: none; padding-bottom: 0; }
-.drow .k { color: var(--muted); flex-shrink: 0; }
-.drow .v { text-align: right; word-break: break-all; font-weight: 500; }
-
-/* ── Badge ── */
-.badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11.5px; font-weight: 600;
-  padding: 2px 8px; border-radius: 3px; white-space: nowrap;
-}
-.bdot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-.badge.active  { color: var(--ok);   background: var(--ok-bg);    border: 1px solid var(--ok-bd); }
-.badge.revoked { color: var(--err);  background: var(--err-bg);   border: 1px solid var(--err-bd); }
-.badge.none    { color: var(--muted);background: var(--surface-2);border: 1px solid var(--border); }
-.badge.active  .bdot { background: var(--ok);  animation: pulse 2.2s ease-in-out infinite; }
-.badge.revoked .bdot { background: var(--err); }
-.badge.none    .bdot { background: var(--muted); }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-@media (prefers-reduced-motion: reduce) { .bdot { animation: none !important; } }
-
-/* ── Cap display ── */
-.cap-num {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 30px; font-weight: 500;
-  color: var(--ink); letter-spacing: -0.5px; line-height: 1.2;
-}
-.cap-unit { font-size: 16px; color: var(--muted); font-weight: 400; margin-left: 4px; }
-.cap-label { font-size: 12px; color: var(--muted); margin-top: 3px; }
-.cap-sep { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
-
-/* ── Form ── */
-.field { display: flex; flex-direction: column; gap: 5px; }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-label { font-size: 11.5px; font-weight: 500; color: var(--muted); }
-input {
-  background: var(--surface-2); border: 1px solid var(--border);
-  color: var(--ink); border-radius: var(--r); padding: 8px 10px;
-  font-size: 13px; font-family: inherit; outline: none;
-  transition: border-color .12s; width: 100%;
-}
-input:focus { border-color: var(--primary); }
-input::placeholder { color: var(--muted); opacity: .7; }
-
-/* ── Buttons ── */
-.btn-row { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; }
-button {
-  cursor: pointer; border: 1px solid var(--border);
-  background: var(--surface-2); color: var(--ink);
-  border-radius: var(--r); padding: 8px 14px;
-  font-size: 13px; font-weight: 500; font-family: inherit;
-  transition: background .10s, border-color .10s;
-  outline: none; line-height: 1; white-space: nowrap;
-}
-button:hover:not(:disabled) { background: var(--surface); border-color: var(--border-s); }
-button.primary { background: var(--primary); border-color: transparent; color: oklch(1 0 0); font-weight: 600; }
-button.primary:hover:not(:disabled) { background: var(--primary-h); }
-button.danger  { color: var(--err); border-color: var(--err-bd); background: transparent; }
-button.danger:hover:not(:disabled) { background: var(--err-bg); }
-button:disabled { opacity: .35; cursor: not-allowed; }
-button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-
-/* ── Status line ── */
-.status { font-size: 12px; color: var(--warn); min-height: 18px; margin-top: 10px; display: flex; align-items: center; gap: 6px; }
-.spin {
-  width: 10px; height: 10px;
-  border: 1.5px solid oklch(0.72 0.15 75 / .25);
-  border-top-color: var(--warn); border-radius: 50%;
-  animation: spin .7s linear infinite; flex-shrink: 0;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .spin { animation: none; opacity: .6; } }
-
-/* ── Gemini reasoning ── */
-.prompt-row { display: flex; gap: 8px; }
-.prompt-row input { flex: 1; }
-.reasoning {
-  margin-top: 12px; padding: 12px 14px;
-  background: oklch(0.14 0.012 35); border: 1px solid oklch(0.24 0.022 35);
-  border-radius: var(--r); font-size: 12.5px;
-  color: oklch(0.70 0.020 35); line-height: 1.55;
+.step {
+  padding: 32px 28px;
+  background: var(--white);
+  border-right: var(--bw) solid var(--ink);
+  position: relative;
 }
 
-/* ── Log pane ── */
-.log-head {
-  padding: 14px 18px 12px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: flex-start; justify-content: space-between; flex-shrink: 0;
-}
-.log-title { font-size: 13px; font-weight: 600; color: var(--ink); }
-.log-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.log-legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); flex-shrink: 0; margin-top: 2px; }
-.leg { display: flex; align-items: center; gap: 4px; }
-.leg-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.log-body {
-  flex: 1; overflow-y: auto; padding: 14px 18px;
-  scrollbar-width: thin; scrollbar-color: var(--border-s) transparent;
-}
-.log-body::-webkit-scrollbar { width: 4px; }
-.log-body::-webkit-scrollbar-thumb { background: var(--border-s); border-radius: 4px; }
+.step:last-child { border-right: none; }
 
-/* ── Log entry ── */
-.entry {
-  border-radius: var(--r); border: 1px solid var(--border);
-  background: var(--surface); padding: 11px 13px; margin-bottom: 7px;
-  transition: border-color .10s;
-  animation: fadein .2s ease-out;
-}
-@keyframes fadein { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .entry { animation: none; } }
-.entry:last-child { margin-bottom: 0; }
-.entry:hover { border-color: var(--border-s); }
-.entry.ok      { background: var(--ok-bg);  border-color: var(--ok-bd); }
-.entry.blocked { background: var(--err-bg); border-color: var(--err-bd); }
-.entry.pending { background: var(--warn-bg);border-color: var(--warn-bd); }
-.etop { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
-.epill { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 3px; flex-shrink: 0; }
-.entry.ok      .epill { color: var(--ok);   background: oklch(0.22 0.08 145); }
-.entry.blocked .epill { color: var(--err);  background: oklch(0.22 0.09 10); }
-.entry.pending .epill { color: var(--warn); background: oklch(0.22 0.07 75); }
-.etitle {
-  font-size: 13px; font-weight: 600; flex: 1; min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.entry.ok      .etitle { color: var(--ok); }
-.entry.blocked .etitle { color: var(--err); }
-.entry.pending .etitle { color: var(--warn); }
-.emeta { font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
-.ehash { font-size: 11.5px; }
-.ehash a { color: var(--accent); }
-
-/* ── Empty state ── */
-.empty {
-  padding: 36px 24px; text-align: center;
-  border: 1px dashed var(--border-s); border-radius: 7px;
-}
-.empty-icon { font-size: 26px; opacity: .45; margin-bottom: 10px; }
-.empty-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
-.empty-body { font-size: 12.5px; color: var(--muted); line-height: 1.6; max-width: 38ch; margin: 0 auto; }
-
-/* ── Tour overlay ── */
-.tour-overlay {
-  display: none; position: fixed; inset: 0;
-  z-index: 1000; pointer-events: none;
-}
-.tour-overlay.active { display: block; }
-
-.tour-backdrop {
-  position: absolute; inset: 0;
-  background: oklch(0 0 0 / .72);
-  pointer-events: all;
+.step-num {
+  font-size: 48px; font-weight: 900;
+  color: var(--primary); line-height: 1;
+  margin-bottom: 16px; letter-spacing: -0.04em;
 }
 
-.tour-spotlight {
-  position: fixed; border-radius: 7px;
-  box-shadow: 0 0 0 3px var(--primary), 0 0 0 9999px oklch(0 0 0 / .72);
-  pointer-events: none; z-index: 1001;
-  transition: top .3s ease, left .3s ease, width .3s ease, height .3s ease;
+.step-title {
+  font-size: 20px; font-weight: 800;
+  margin-bottom: 10px; letter-spacing: -0.02em;
 }
 
-.tour-card {
-  position: fixed; z-index: 1002;
-  background: var(--surface-2); border: 1px solid var(--border-s);
-  border-radius: 8px; padding: 22px 22px 18px;
-  width: 308px; max-width: calc(100vw - 32px);
-  box-shadow: 0 12px 40px oklch(0 0 0 / .6);
-  pointer-events: all;
+.step-body { font-size: 15px; color: var(--muted); line-height: 1.65; }
+
+/* arrow connector */
+.step::after {
+  content: '→';
+  position: absolute;
+  right: -18px; top: 32px;
+  font-size: 20px; font-weight: 900;
+  color: var(--ink);
+  z-index: 1;
+  background: var(--white);
+  padding: 0 4px;
+}
+.step:last-child::after { display: none; }
+
+/* ── Why section ── */
+.why { background: var(--primary); border-bottom: var(--bw) solid var(--ink); }
+.why .section-title { color: rgba(255,255,255,0.7); }
+.why .section-heading { color: #fff; }
+
+.why-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
 }
 
-.tour-step-label {
-  font-size: 11px; font-weight: 600;
-  color: var(--primary); margin-bottom: 8px;
+.why-card {
+  background: var(--white);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh);
+  padding: 28px 26px;
+}
+
+.why-icon {
+  font-size: 28px; margin-bottom: 12px;
+  display: block; line-height: 1;
+}
+
+.why-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.02em; }
+.why-body  { font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+/* ── Proof section ── */
+.proof { background: var(--ink); border-bottom: var(--bw) solid var(--ink); }
+.proof .section-title { color: var(--primary); }
+.proof .section-heading { color: #fff; }
+
+.proof-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+}
+
+.proof-card {
+  background: #1A1A1A;
+  border: var(--bw) solid #333;
+  border-radius: var(--r);
+  padding: 22px 20px;
+}
+
+.proof-label { font-size: 11px; font-weight: 700; color: #666; letter-spacing: 0.06em; margin-bottom: 8px; }
+.proof-val { font-size: 13px; color: #E8E8E8; font-family: 'JetBrains Mono', monospace; word-break: break-all; }
+.proof-val a { color: var(--primary); text-decoration: none; }
+.proof-val a:hover { text-decoration: underline; }
+
+/* ── Tech stack ── */
+.stack { background: var(--bg); border-bottom: var(--bw) solid var(--ink); }
+
+.stack-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+}
+
+.stack-card {
+  background: var(--white);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: var(--sh-sm);
+  padding: 20px 18px;
+  text-align: center;
+  transition: transform .1s, box-shadow .1s;
+}
+.stack-card:hover { transform: translate(-2px, -2px); box-shadow: var(--sh); }
+
+.stack-icon { font-size: 28px; margin-bottom: 8px; display: block; }
+.stack-name { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+.stack-desc { font-size: 12px; color: var(--muted); }
+
+/* ── CTA bottom ── */
+.cta-section {
+  background: var(--white);
+  border-top: var(--bw) solid var(--ink);
+  text-align: center;
+  padding: 96px 24px;
+}
+
+.cta-heading {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 900; letter-spacing: -0.04em;
+  margin-bottom: 16px; line-height: 1.1;
+}
+
+.cta-sub { font-size: 17px; color: var(--muted); margin-bottom: 40px; }
+
+/* ── Footer ── */
+footer {
+  background: var(--ink);
+  border-top: var(--bw) solid var(--ink);
+  padding: 28px 24px;
   display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
 }
 
-.tour-dots { display: flex; gap: 4px; }
-.tour-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border-s); transition: background .2s; }
-.tour-dot.on { background: var(--primary); }
-
-.tour-title { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 8px; line-height: 1.3; text-wrap: balance; }
-.tour-body  { font-size: 13px; color: oklch(0.76 0.010 35); line-height: 1.65; margin-bottom: 18px; }
-
-.tour-actions { display: flex; align-items: center; justify-content: space-between; }
-.tour-skip { font-size: 12px; color: var(--muted); background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; transition: color .12s; }
-.tour-skip:hover { color: var(--ink); }
-.tour-nav { display: flex; gap: 7px; }
-.tour-prev {
-  font-size: 13px; font-weight: 500; padding: 7px 13px;
-  border-radius: var(--r); cursor: pointer; font-family: inherit;
-  background: var(--surface); border: 1px solid var(--border); color: var(--ink);
-  transition: border-color .1s; outline: none;
+.footer-logo { display: flex; align-items: center; gap: 8px; }
+.footer-mark {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--primary); border: 2px solid #fff;
+  display: grid; place-items: center;
 }
-.tour-prev:hover { border-color: var(--border-s); }
-.tour-next {
-  font-size: 13px; font-weight: 600; padding: 7px 14px;
-  border-radius: var(--r); cursor: pointer; font-family: inherit;
-  background: var(--primary); border: 1px solid transparent; color: oklch(1 0 0);
-  outline: none; transition: background .1s;
-}
-.tour-next:hover { background: var(--primary-h); }
+.footer-name { font-size: 14px; font-weight: 800; color: #fff; }
+.footer-text { font-size: 12px; color: #888; }
+.footer-link { color: var(--primary); text-decoration: none; }
+.footer-link:hover { text-decoration: underline; }
 
-/* center step (intro, no target) */
-.tour-overlay.centered .tour-spotlight { display: none !important; }
-.tour-overlay.centered .tour-card {
-  top: 50% !important; left: 50% !important;
-  transform: translate(-50%, -50%);
-  width: 380px;
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .hero-inner { grid-template-columns: 1fr; gap: 40px; }
+  .demo-card { max-width: 480px; }
+  .steps { grid-template-columns: 1fr; }
+  .step { border-right: none; border-bottom: var(--bw) solid var(--ink); }
+  .step:last-child { border-bottom: none; }
+  .step::after { content: '↓'; right: auto; left: 28px; top: auto; bottom: -18px; }
+  .why-grid { grid-template-columns: 1fr 1fr; }
+  .proof-grid { grid-template-columns: 1fr; }
+  .stack-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* ── Responsive — tablet ── */
-@media (max-width: 960px) {
-  .app {
-    grid-template-columns: 220px 1fr;
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      "info controls"
-      "log  log";
-    height: auto;
-    min-height: calc(100vh - 72px);
-    overflow: visible;
-  }
-  .pane-info     { overflow: visible; }
-  .pane-controls { overflow: visible; }
-  .pane-log      { height: 55vh; min-height: 380px; }
-}
-
-/* ── Responsive — mobile ── */
-@media (max-width: 600px) {
-  body { padding-top: 64px; }
-
-  .header {
-    top: 8px;
-    width: calc(100% - 20px);
-    height: 44px;
-    padding: 0 10px 0 8px;
-    gap: 8px;
-  }
-
-  /* hide less critical header items on small screens */
-  .header-mid { display: none; }
-  .g-status   { display: none; }
-  .sep        { display: none; }
-  .tour-btn span { display: none; } /* icon only on very small */
-
-  .app {
-    grid-template-columns: 1fr;
-    grid-template-areas: "info" "controls" "log";
-    height: auto;
-    min-height: calc(100vh - 64px);
-    overflow: visible;
-    gap: 1px;
-  }
-
-  .pane-info, .pane-controls { overflow: visible; }
-  .pane-log { height: 70vh; min-height: 400px; }
-
-  /* larger touch targets */
-  input { padding: 11px 12px; font-size: 15px; }
-  label { font-size: 12.5px; }
-  button { padding: 11px 16px; font-size: 14px; min-height: 44px; }
-
-  /* stack form grids and buttons vertically */
-  .two { grid-template-columns: 1fr 1fr; } /* keep 2-col for inputs, fits fine */
-  .btn-row { gap: 8px; }
-  .btn-row button { flex: 1; min-width: 0; }
-
-  /* prompt row stays side-by-side */
-  .prompt-row input { font-size: 14px; }
-
-  /* section padding */
-  .sec { padding: 16px 16px 18px; }
-
-  /* tour card full width */
-  .tour-card { width: calc(100vw - 32px); }
-  .tour-overlay.centered .tour-card { width: calc(100vw - 32px); }
-}
-
-@media (max-width: 380px) {
-  .two { grid-template-columns: 1fr; }
+@media (max-width: 560px) {
+  body { padding-top: 72px; }
+  .nav { top: 10px; width: calc(100% - 20px); height: 46px; padding: 0 6px 0 12px; }
+  .nav-link { display: none; }
+  section { padding: 56px 16px; }
+  .hero { padding: 72px 16px 56px; }
+  .hero-actions { flex-direction: column; }
+  .btn { width: 100%; justify-content: center; }
+  .why-grid { grid-template-columns: 1fr; }
+  .stack-grid { grid-template-columns: repeat(2, 1fr); }
+  .demo-card { font-size: 11px; }
+  .demo-body { padding: 16px 14px; }
+  .demo-label { min-width: 120px; }
+  footer { flex-direction: column; text-align: center; }
 }
 </style>
 </head>
 <body>
 
-<!-- Tour overlay -->
-<div class="tour-overlay" id="tourOverlay" role="dialog" aria-modal="true" aria-label="Guided tour">
-  <div class="tour-backdrop" id="tourBackdrop"></div>
-  <div class="tour-spotlight" id="tourSpotlight"></div>
-  <div class="tour-card" id="tourCard">
-    <div class="tour-step-label">
-      <span id="tourStepLabel"></span>
-      <div class="tour-dots" id="tourDots"></div>
-    </div>
-    <div class="tour-title" id="tourTitle"></div>
-    <div class="tour-body"  id="tourBody"></div>
-    <div class="tour-actions">
-      <button class="tour-skip" id="tourSkip">Skip tour</button>
-      <div class="tour-nav">
-        <button class="tour-prev" id="tourPrev">Back</button>
-        <button class="tour-next" id="tourNext">Next →</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Header -->
-<header class="header">
-  <div class="logo">
-    <div class="logo-mark">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M6 10a3.5 3.5 0 0 0 4.95.4l1.75-1.75A3.5 3.5 0 0 0 8 4.04L6.9 5.15" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-        <path d="M10 6a3.5 3.5 0 0 0-4.95-.4L3.3 7.35A3.5 3.5 0 0 0 8 11.96l1.1-1.11" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+<!-- Nav -->
+<nav class="nav">
+  <a class="nav-logo" href="/">
+    <div class="nav-mark">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <path d="M6 10a3.5 3.5 0 0 0 4.95.4l1.75-1.75A3.5 3.5 0 0 0 8 4.04L6.9 5.15" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M10 6a3.5 3.5 0 0 0-4.95-.4L3.3 7.35A3.5 3.5 0 0 0 8 11.96l1.1-1.11" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
     </div>
-    <span class="logo-name">Leash <em>/ Casper</em></span>
-  </div>
-  <div class="sep"></div>
-  <span class="net-badge" id="net">testnet</span>
-  <div class="header-mid">
-    <span style="color:var(--muted);font-size:12px">contract</span>
-    <a id="contractLink" class="mono" href="#" target="_blank" style="font-size:12px">—</a>
-  </div>
-  <div class="header-end">
-    <div class="g-status">
-      <div class="g-dot" id="gDot"></div>
-      <span id="gLabel" style="font-size:12px">Gemini</span>
+    <span class="nav-name">Leash</span>
+  </a>
+  <span class="nav-badge">Casper Testnet</span>
+  <div class="nav-spacer"></div>
+  <a class="nav-link" href="#how">How it works</a>
+  <a class="nav-link" href="#proof">Live proof</a>
+  <a class="nav-cta" href="/dashboard.html">
+    Open Dashboard
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5h8M7 3l3.5 3.5L7 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </a>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-heading">
+        Put a <span>leash</span><br>on your AI agent.
+      </div>
+      <p class="hero-sub">
+        Give AI agents real, enforceable spending limits on the Casper blockchain.
+        The smart contract says no — automatically, permanently, with no override possible.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="/dashboard.html">
+          Open Dashboard
+          <svg width="15" height="15" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5h8M7 3l3.5 3.5L7 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="btn btn-ghost" href="https://testnet.cspr.live/contract-package/a7d018fcc02bec1a44d1060c6ea77be8869919a91ab4e8f5daf66ecf86acd660" target="_blank">
+          View contract ↗
+        </a>
+      </div>
     </div>
-    <button class="tour-btn" id="tourTrigger">
-      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-        <circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="1.2"/>
-        <path d="M6.5 5.8v3.4M6.5 3.8v.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+
+    <!-- Terminal demo -->
+    <div class="demo-card">
+      <div class="demo-bar">
+        <div class="demo-dot" style="background:#FF5F57"></div>
+        <div class="demo-dot" style="background:#FFBD2E"></div>
+        <div class="demo-dot" style="background:#28CA41"></div>
+        <span style="font-size:11px;color:#666;margin-left:8px;font-family:monospace">leash — casper testnet</span>
+      </div>
+      <div class="demo-body">
+        <div class="demo-line">
+          <span class="demo-label">AGENT REQUEST</span>
+          <span class="demo-val">send 5 CSPR</span>
+        </div>
+        <div class="demo-line">
+          <span class="demo-label">SPENDING CAP</span>
+          <span class="demo-val">10 CSPR</span>
+        </div>
+        <div class="demo-line">
+          <span class="demo-label">RESULT</span>
+          <span class="demo-ok">✓ ALLOWED</span>
+        </div>
+        <hr class="demo-sep" />
+        <div class="demo-line">
+          <span class="demo-label">AGENT REQUEST</span>
+          <span class="demo-val">send 50 CSPR</span>
+        </div>
+        <div class="demo-line">
+          <span class="demo-label">SPENDING CAP</span>
+          <span class="demo-val">10 CSPR</span>
+        </div>
+        <div class="demo-line">
+          <span class="demo-label">RESULT</span>
+          <span class="demo-fail">✕ BLOCKED — ExceedsCap</span>
+        </div>
+        <hr class="demo-sep" />
+        <div class="demo-caption mono">deploy hash verifiable on explorer ↗</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="how" id="how">
+  <div class="container">
+    <div class="section-title">HOW IT WORKS</div>
+    <div class="section-heading">Three steps. One leash.</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-title">Register</div>
+        <div class="step-body">Give your AI agent an on-chain identity with a spending cap. Only you, as the owner, can set or change the rules. The contract stores them permanently.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">Enforce</div>
+        <div class="step-body">The smart contract checks every transfer request against the cap. If the agent tries to exceed it, the blockchain rejects the transaction. No exceptions.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">Verify</div>
+        <div class="step-body">Every allowed or blocked action produces a deploy hash. Anyone can look it up on the Casper explorer to confirm what happened — and when.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Why -->
+<section class="why">
+  <div class="container">
+    <div class="section-title">WHY IT MATTERS</div>
+    <div class="section-heading" style="color:#fff">The rules live on the blockchain,<br>not in your code.</div>
+    <div class="why-grid">
+      <div class="why-card">
+        <span class="why-icon">🔒</span>
+        <div class="why-title">Tamper-proof enforcement</div>
+        <div class="why-body">Traditional spending limits live in app code — they can be patched, bypassed, or misconfigured. On Casper, the contract is the enforcer. No code change can override it.</div>
+      </div>
+      <div class="why-card">
+        <span class="why-icon">🧾</span>
+        <div class="why-title">Immutable audit trail</div>
+        <div class="why-body">Every action — allowed or blocked — leaves a permanent record on the public blockchain. You don't need to trust the operator's logs. The chain doesn't lie.</div>
+      </div>
+      <div class="why-card">
+        <span class="why-icon">⚡</span>
+        <div class="why-title">Real AI integration</div>
+        <div class="why-body">Gemini AI reasons in natural language and calls the contract directly. The enforcement still applies. The AI can ask nicely — the blockchain still says no if the cap is exceeded.</div>
+      </div>
+      <div class="why-card">
+        <span class="why-icon">🔑</span>
+        <div class="why-title">Owner-controlled lifecycle</div>
+        <div class="why-body">Register, fund, and revoke agent access at any time. Only the owner's private key can make these changes. Revoked agents are blocked immediately — on-chain, with no grace period.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Live proof -->
+<section class="proof" id="proof">
+  <div class="container">
+    <div class="section-title">LIVE PROOF</div>
+    <div class="section-heading">Real deploys. Real testnet.</div>
+    <div class="proof-grid">
+      <div class="proof-card">
+        <div class="proof-label">CONTRACT PACKAGE</div>
+        <div class="proof-val">
+          <a href="https://testnet.cspr.live/contract-package/a7d018fcc02bec1a44d1060c6ea77be8869919a91ab4e8f5daf66ecf86acd660" target="_blank">
+            a7d018fc…acd660 ↗
+          </a>
+        </div>
+      </div>
+      <div class="proof-card">
+        <div class="proof-label">COMPLIANT TRANSFER (5 CSPR)</div>
+        <div class="proof-val">
+          <a href="https://testnet.cspr.live/deploy/c77f7080a851ced1eafa17a2c1fe39d90f22e9b83a81ad5e9a3a9fd3e5dca79df" target="_blank">
+            c77f7080…ca79df ↗
+          </a>
+        </div>
+      </div>
+      <div class="proof-card">
+        <div class="proof-label">BLOCKED TRANSFER (50 CSPR — ExceedsCap)</div>
+        <div class="proof-val mono" style="color:#F87171">
+          User error: 5 — verifiable on chain
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tech stack -->
+<section class="stack">
+  <div class="container">
+    <div class="section-title">BUILT WITH</div>
+    <div class="section-heading">Serious tools. Real chain.</div>
+    <div class="stack-grid">
+      <div class="stack-card">
+        <span class="stack-icon">⛓️</span>
+        <div class="stack-name">Casper Network</div>
+        <div class="stack-desc">Public testnet, real deploys, immutable records</div>
+      </div>
+      <div class="stack-card">
+        <span class="stack-icon">🦀</span>
+        <div class="stack-name">Odra 2.8.2</div>
+        <div class="stack-desc">Rust smart contract framework, 8/8 tests pass</div>
+      </div>
+      <div class="stack-card">
+        <span class="stack-icon">🤖</span>
+        <div class="stack-name">Gemini AI</div>
+        <div class="stack-desc">Natural language → on-chain function calls</div>
+      </div>
+      <div class="stack-card">
+        <span class="stack-icon">🖥️</span>
+        <div class="stack-name">Node + Express</div>
+        <div class="stack-desc">casper-client backend, live testnet polling</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-heading">Try it live on testnet.</div>
+    <p class="cta-sub">Register an agent, set a cap, attempt a transfer — watch the blockchain enforce it in real time.</p>
+    <a class="btn btn-primary" href="/dashboard.html" style="font-size:17px;padding:16px 32px;box-shadow:var(--sh-lg)">
+      Open the Dashboard
+      <svg width="16" height="16" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5h8M7 3l3.5 3.5L7 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-logo">
+    <div class="footer-mark">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M6 10a3.5 3.5 0 0 0 4.95.4l1.75-1.75A3.5 3.5 0 0 0 8 4.04L6.9 5.15" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M10 6a3.5 3.5 0 0 0-4.95-.4L3.3 7.35A3.5 3.5 0 0 0 8 11.96l1.1-1.11" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
-      Take the tour
-    </button>
+    </div>
+    <span class="footer-name">Leash</span>
   </div>
-</header>
+  <span class="footer-text">Casper Agentic Buildathon 2026 · <a class="footer-link" href="https://github.com/Dancuso419/CASPER-AGENT-LEASH" target="_blank">GitHub ↗</a></span>
+  <span class="footer-text">Built on <a class="footer-link" href="https://casper.network" target="_blank">Casper Network</a></span>
+</footer>
 
-<!-- App -->
-<div class="app">
-
-  <!-- Col 1: Identity + Rules -->
-  <div class="pane-info">
-
-    <div class="sec" id="secIdentity">
-      <div class="sec-head">
-        <span class="sec-title">Agent Identity</span>
-      </div>
-      <div class="drow">
-        <span class="k">Status</span>
-        <span class="v">
-          <span id="agentStatus" class="badge none"><span class="bdot"></span>not registered</span>
-        </span>
-      </div>
-      <div class="drow">
-        <span class="k">Agent</span>
-        <span class="v mono" id="agentHash">—</span>
-      </div>
-      <div class="drow">
-        <span class="k">Owner</span>
-        <span class="v mono" id="ownerHash">—</span>
-      </div>
-      <div class="drow">
-        <span class="k">Registered</span>
-        <span class="v" id="createdAt">—</span>
-      </div>
-    </div>
-
-    <div class="sec" id="secRules">
-      <div class="sec-head">
-        <span class="sec-title">Permission Rules</span>
-      </div>
-      <div style="margin-bottom:16px">
-        <div class="cap-num mono" id="cap">—<span class="cap-unit">CSPR</span></div>
-        <div class="cap-label">maximum per transaction</div>
-      </div>
-      <hr class="cap-sep" />
-      <div class="drow" style="border:none;padding:0">
-        <span class="k">Allowed action</span>
-        <span class="v" id="allowed">—</span>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Col 2: Controls -->
-  <div class="pane-controls">
-
-    <div class="sec" id="secOwner">
-      <div class="sec-head">
-        <span class="sec-title">Owner Controls</span>
-        <span class="sec-sub">register · fund · revoke</span>
-      </div>
-      <div class="two">
-        <div class="field">
-          <label for="capIn">Spending cap (CSPR)</label>
-          <input id="capIn" type="number" value="10" min="1" />
-        </div>
-        <div class="field">
-          <label for="depIn">Deposit amount (CSPR)</label>
-          <input id="depIn" type="number" value="100" min="1" />
-        </div>
-      </div>
-      <div class="btn-row">
-        <button class="primary" data-act="register">Register agent</button>
-        <button data-act="deposit">Fund contract</button>
-        <button class="danger" data-act="revoke">Revoke</button>
-      </div>
-    </div>
-
-    <div class="sec" id="secAction">
-      <div class="sec-head">
-        <span class="sec-title">Agent Action</span>
-        <span class="sec-sub">test enforcement</span>
-      </div>
-      <div class="two">
-        <div class="field">
-          <label for="amtIn">Amount (CSPR)</label>
-          <input id="amtIn" type="number" value="5" min="1" />
-        </div>
-        <div class="field">
-          <label for="rcptIn">Recipient</label>
-          <input id="rcptIn" value="owner" />
-        </div>
-      </div>
-      <div class="btn-row">
-        <button class="primary" data-act="action">Attempt transfer</button>
-      </div>
-      <div class="status" id="ctlStatus"></div>
-    </div>
-
-    <div class="sec" id="secGemini">
-      <div class="sec-head">
-        <span class="sec-title">Gemini → On-chain</span>
-        <span class="sec-sub">natural language</span>
-      </div>
-      <div class="prompt-row">
-        <input id="promptIn" placeholder='"send 5 CSPR to the owner"' />
-        <button class="primary" data-act="prompt">Run</button>
-      </div>
-      <div class="status" id="promptStatus"></div>
-      <div id="reason"></div>
-    </div>
-
-  </div>
-
-  <!-- Col 3: Log -->
-  <div class="pane-log" id="secLog">
-    <div class="log-head">
-      <div>
-        <div class="log-title">Activity Log</div>
-        <div class="log-sub">on-chain verified — click any hash to confirm on explorer</div>
-      </div>
-      <div class="log-legend">
-        <span class="leg"><span class="leg-dot" style="background:var(--ok)"></span>Allowed</span>
-        <span class="leg"><span class="leg-dot" style="background:var(--err)"></span>Blocked</span>
-      </div>
-    </div>
-    <div class="log-body" id="log">
-      <div class="empty">
-        <div class="empty-icon">◎</div>
-        <div class="empty-title">No actions yet</div>
-        <div class="empty-body">Register an agent and attempt a transfer. Every action produces a real deploy hash verifiable on the Casper explorer.</div>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<script>
-/* ── State ── */
-let CFG = {};
-const $ = id => document.getElementById(id);
-const short = (s, n = 12) => s ? s.slice(0, n) + '…' + s.slice(-6) : '—';
-const explorerUrl = h => `${CFG.explorerBase}/deploy/${h}`;
-
-async function api(path, opts) {
-  const r = await fetch(path, opts);
-  return r.json();
-}
-
-/* ── Boot ── */
-async function loadConfig() {
-  CFG = await api('/api/config');
-  $('net').textContent = CFG.chainName;
-  const cl = $('contractLink');
-  cl.href = `${CFG.explorerBase}/contract-package/${CFG.packageHash}`;
-  cl.textContent = short(CFG.packageHash, 10);
-  if (CFG.geminiEnabled) { $('gDot').classList.add('live'); $('gLabel').textContent = 'Gemini connected'; }
-  $('agentHash').textContent = short(CFG.agentAccountHash, 12);
-  $('ownerHash').textContent = short(CFG.ownerAccountHash, 12);
-}
-
-async function refresh() {
-  const [{ agent }, log] = await Promise.all([api('/api/status'), api('/api/log')]);
-  const badge = $('agentStatus');
-  if (!agent) {
-    badge.className = 'badge none';
-    badge.innerHTML = '<span class="bdot"></span>not registered';
-  } else if (agent.isActive) {
-    badge.className = 'badge active';
-    badge.innerHTML = '<span class="bdot"></span>active';
-  } else {
-    badge.className = 'badge revoked';
-    badge.innerHTML = '<span class="bdot"></span>revoked';
-  }
-  $('createdAt').textContent = agent?.createdAt ? new Date(agent.createdAt).toLocaleString() : '—';
-  const capEl = $('cap');
-  if (agent) {
-    capEl.innerHTML = `${agent.spendingCapCspr}<span class="cap-unit">CSPR</span>`;
-  } else {
-    capEl.innerHTML = `—<span class="cap-unit">CSPR</span>`;
-  }
-  $('allowed').textContent = agent?.allowedAction || '—';
-
-  const el = $('log');
-  if (!log.length) {
-    el.innerHTML = `<div class="empty">
-      <div class="empty-icon">◎</div>
-      <div class="empty-title">No actions yet</div>
-      <div class="empty-body">Register an agent and attempt a transfer. Every action produces a real deploy hash verifiable on the Casper explorer.</div>
-    </div>`;
-    return;
-  }
-  el.innerHTML = log.map(e => {
-    const cls  = e.status === 'success' ? 'ok' : e.status === 'failure' ? 'blocked' : 'pending';
-    const pill = e.status === 'success' ? 'Allowed' : e.status === 'failure' ? 'Blocked' : 'Pending';
-    const verb = e.type === 'transfer' ? 'Transfer' : e.type[0].toUpperCase() + e.type.slice(1);
-    const amt  = e.amountCspr != null ? ` ${e.amountCspr} CSPR` : '';
-    const err  = e.errorName ? ` · ${e.errorName}` : '';
-    return `<div class="entry ${cls}">
-      <div class="etop">
-        <span class="epill">${pill}</span>
-        <span class="etitle">${verb}${amt} — ${e.message}</span>
-      </div>
-      <div class="emeta">${new Date(e.ts).toLocaleTimeString()}${err}</div>
-      <div class="ehash mono"><a href="${explorerUrl(e.deployHash)}" target="_blank">${short(e.deployHash, 14)} ↗</a></div>
-    </div>`;
-  }).join('');
-}
-
-/* ── Actions ── */
-function busy(on, msg) {
-  document.querySelectorAll('button[data-act]').forEach(b => b.disabled = on);
-  $('ctlStatus').innerHTML = on
-    ? `<span class="spin"></span>${msg || 'Submitting to Casper testnet…'}`
-    : '';
-}
-
-async function act(name) {
-  if (name === 'prompt') return runPrompt();
-  try {
-    busy(true);
-    let path, body;
-    if      (name === 'register') { path = '/api/register'; body = { spendingCapCspr: +$('capIn').value }; }
-    else if (name === 'deposit')  { path = '/api/deposit';  body = { amountCspr: +$('depIn').value }; }
-    else if (name === 'revoke')   { path = '/api/revoke';   body = {}; }
-    else if (name === 'action')   { path = '/api/action';   body = { amountCspr: +$('amtIn').value, recipient: $('rcptIn').value }; }
-    $('ctlStatus').innerHTML = '<span class="spin"></span>Waiting for on-chain execution (~15–40s)…';
-    await api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    await refresh();
-  } catch(e) {
-    $('ctlStatus').textContent = 'Error: ' + e.message;
-  } finally {
-    busy(false);
-  }
-}
-
-async function runPrompt() {
-  const msg = $('promptIn').value.trim();
-  if (!msg) return;
-  document.querySelectorAll('button[data-act]').forEach(b => b.disabled = true);
-  const ps = $('promptStatus');
-  ps.innerHTML = '<span class="spin"></span>Reasoning, then acting on-chain…';
-  $('reason').innerHTML = '';
-  try {
-    const res = await api('/api/prompt', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: msg }),
-    });
-    if (res.error) {
-      ps.textContent = 'Error: ' + res.error;
-    } else {
-      ps.textContent = res.tool
-        ? `→ ${res.tool.name}(${JSON.stringify(res.tool.args)})`
-        : 'No tool call.';
-      if (res.reasoning) $('reason').innerHTML = `<div class="reasoning">${res.reasoning}</div>`;
-    }
-    await refresh();
-  } catch(e) {
-    ps.textContent = 'Error: ' + e.message;
-  } finally {
-    document.querySelectorAll('button[data-act]').forEach(b => b.disabled = false);
-  }
-}
-
-document.querySelectorAll('button[data-act]').forEach(b =>
-  b.addEventListener('click', () => act(b.dataset.act)));
-$('promptIn').addEventListener('keydown', e => { if (e.key === 'Enter') act('prompt'); });
-
-/* ── Tour ── */
-const STEPS = [
-  {
-    target: null,
-    title: 'Welcome to Agent Leash',
-    body: 'This dashboard shows AI agent permission enforcement on a real public blockchain. Every action you trigger here is an actual blockchain transaction — permanently recorded, verifiable by anyone.',
-  },
-  {
-    target: '#secIdentity',
-    title: "The Agent's ID Card",
-    body: "Every AI agent gets a unique address on the Casper blockchain — like a bank account number. This card shows who the agent is, who owns it, and whether it's currently active.",
-  },
-  {
-    target: '#secRules',
-    title: 'The Leash — Hard Limits',
-    body: "The spending cap is the maximum the agent can move in one transaction. The blockchain enforces this automatically — there's no way around it, not even by the agent itself.",
-  },
-  {
-    target: '#secOwner',
-    title: 'Owner Controls',
-    body: "Only the owner can register a new agent, add funds to the contract, or revoke access. These operations require the owner's private key — nobody else can do them.",
-  },
-  {
-    target: '#secAction',
-    title: 'Test the Enforcement',
-    body: 'Enter an amount and hit "Attempt Transfer." Within the cap → transfer goes through. Over the cap → the blockchain blocks it. Try both to see the enforcement in action.',
-  },
-  {
-    target: '#secGemini',
-    title: 'Talk to the Agent',
-    body: 'Type what you want in plain English: "send 5 CSPR to the owner." Gemini AI understands the request and issues the on-chain command. The same spending cap rules still apply.',
-  },
-  {
-    target: '#secLog',
-    title: 'The Immutable Receipt',
-    body: 'Every action leaves a deploy hash here — a unique ID on the public Casper explorer. Click any link to prove the transaction really happened. These records can never be changed.',
-  },
-];
-
-let step = 0;
-
-function buildDots() {
-  const container = $('tourDots');
-  container.innerHTML = STEPS.map((_, i) =>
-    `<span class="tour-dot${i === step ? ' on' : ''}"></span>`
-  ).join('');
-}
-
-function positionCard(targetEl) {
-  const card = $('tourCard');
-  card.style.transform = '';
-  const W = 308, PAD = 16;
-  const tr = targetEl.getBoundingClientRect();
-  const vw = window.innerWidth, vh = window.innerHeight;
-  // Try right
-  if (tr.right + PAD + W < vw) {
-    card.style.left = (tr.right + PAD) + 'px';
-    card.style.top  = Math.max(PAD, Math.min(tr.top, vh - 280 - PAD)) + 'px';
-    return;
-  }
-  // Try left
-  if (tr.left - PAD - W > 0) {
-    card.style.left = (tr.left - PAD - W) + 'px';
-    card.style.top  = Math.max(PAD, Math.min(tr.top, vh - 280 - PAD)) + 'px';
-    return;
-  }
-  // Below
-  if (tr.bottom + PAD + 200 < vh) {
-    card.style.top  = (tr.bottom + PAD) + 'px';
-    card.style.left = Math.max(PAD, Math.min(tr.left, vw - W - PAD)) + 'px';
-    return;
-  }
-  // Fallback: above
-  card.style.top  = Math.max(PAD, tr.top - PAD - 200) + 'px';
-  card.style.left = Math.max(PAD, Math.min(tr.left, vw - W - PAD)) + 'px';
-}
-
-function showStep() {
-  const s = STEPS[step];
-  const overlay = $('tourOverlay');
-  const spotlight = $('tourSpotlight');
-
-  $('tourStepLabel').textContent = `Step ${step + 1} of ${STEPS.length}`;
-  $('tourTitle').textContent = s.title;
-  $('tourBody').textContent  = s.body;
-  $('tourPrev').style.visibility = step === 0 ? 'hidden' : 'visible';
-  $('tourNext').textContent = step === STEPS.length - 1 ? 'Done ✓' : 'Next →';
-  buildDots();
-
-  if (!s.target) {
-    overlay.classList.add('centered');
-    spotlight.style.display = 'none';
-    return;
-  }
-
-  overlay.classList.remove('centered');
-  const el = document.querySelector(s.target);
-  if (!el) return;
-
-  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-  requestAnimationFrame(() => {
-    const r = el.getBoundingClientRect();
-    spotlight.style.display = 'block';
-    spotlight.style.top    = (r.top    - 6) + 'px';
-    spotlight.style.left   = (r.left   - 6) + 'px';
-    spotlight.style.width  = (r.width  + 12) + 'px';
-    spotlight.style.height = (r.height + 12) + 'px';
-    positionCard(el);
-  });
-}
-
-function startTour() {
-  step = 0;
-  const o = $('tourOverlay');
-  o.classList.add('active');
-  o.removeAttribute('aria-hidden');
-  document.body.style.overflow = 'hidden';
-  showStep();
-}
-
-function endTour() {
-  const o = $('tourOverlay');
-  o.classList.remove('active', 'centered');
-  o.setAttribute('aria-hidden', 'true');
-  document.body.style.overflow = '';
-  localStorage.setItem('alTourDone', '1');
-}
-
-$('tourNext').addEventListener('click', () => {
-  if (step < STEPS.length - 1) { step++; showStep(); } else endTour();
-});
-$('tourPrev').addEventListener('click', () => { if (step > 0) { step--; showStep(); } });
-$('tourSkip').addEventListener('click', endTour);
-$('tourTrigger').addEventListener('click', startTour);
-$('tourBackdrop').addEventListener('click', endTour);
-
-document.addEventListener('keydown', e => {
-  if (!$('tourOverlay').classList.contains('active')) return;
-  if (e.key === 'Escape') endTour();
-  if (e.key === 'ArrowRight' && step < STEPS.length - 1) { step++; showStep(); }
-  if (e.key === 'ArrowLeft'  && step > 0) { step--; showStep(); }
-});
-
-/* ── Init ── */
-loadConfig().then(refresh);
-setInterval(refresh, 5000);
-if (!localStorage.getItem('alTourDone')) setTimeout(startTour, 900);
-</script>
 </body>
 </html>
