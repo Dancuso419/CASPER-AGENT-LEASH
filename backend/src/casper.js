@@ -5,7 +5,7 @@ import { config, ERROR_CODES } from './config.js';
 
 const run = (args) =>
   new Promise((resolve, reject) => {
-    execFile('casper-client', args, { maxBuffer: 64 * 1024 * 1024 }, (err, stdout, stderr) => {
+    execFile(config.casperBin, args, { maxBuffer: 64 * 1024 * 1024 }, (err, stdout, stderr) => {
       // casper-client prints a deprecation banner before the JSON on put-deploy; slice from first '{'.
       const text = (stdout || '') + (stderr || '');
       const start = text.indexOf('{');

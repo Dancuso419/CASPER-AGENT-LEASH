@@ -32,6 +32,7 @@ export const config = {
     process.env.AGENT_ACCOUNT_HASH ||
     'account-hash-6bd38f839796576f2a9f3ce3721697519f3f24d21f455755c084ed71d69c2d68',
   proxyWasm: process.env.PROXY_WASM || path.join(home, 'proxy_caller.wasm'),
+  casperBin: process.env.CASPER_CLIENT || 'casper-client',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   explorerBase: 'https://testnet.cspr.live',
 };
