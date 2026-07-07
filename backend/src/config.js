@@ -20,24 +20,25 @@ function resolveCasperBin() {
 }
 
 // Cloud deployment (Render): write key content from env vars to temp files on startup.
-// Env vars store PEM newlines as literal "\n"; convert back to real line breaks,
-// strip surrounding quotes, and ensure a trailing newline (casper-client is strict).
-function normalizePem(raw) {
-  let pem = raw.trim().replace(/^["']|["']$/g, ''); // strip wrapping quotes if present
-  pem = pem.replace(/\\n/g, '\n');                  // literal \n -> real newline
-  if (!pem.endsWith('\n')) pem += '\n';
-  return pem;
+// casper-client's PEM parser is strict — it rejects CRLF (\r) and needs a trailing
+// newline. cleanPem normalizes both the base64-decoded and raw \n-escaped inputs:
+// strip wrapping quotes, turn literal "\n" into real newlines, drop all \r, and
+// guarantee a single trailing LF.
+function cleanPem(raw) {
+  let pem = raw.trim().replace(/^["']|["']$/g, '');
+  pem = pem.replace(/\\n/g, '\n').replace(/\r/g, ''); // literal \n -> LF, kill CRLF
+  return pem.replace(/\n*$/, '') + '\n';
 }
 // Prefer base64 (survives any env editor untouched); fall back to raw \n-escaped content.
 if (process.env.OWNER_KEY_B64) {
-  fs.writeFileSync('/tmp/owner_key.pem', Buffer.from(process.env.OWNER_KEY_B64, 'base64').toString('utf8'), { mode: 0o600 });
+  fs.writeFileSync('/tmp/owner_key.pem', cleanPem(Buffer.from(process.env.OWNER_KEY_B64, 'base64').toString('utf8')), { mode: 0o600 });
 } else if (process.env.OWNER_KEY_CONTENT) {
-  fs.writeFileSync('/tmp/owner_key.pem', normalizePem(process.env.OWNER_KEY_CONTENT), { mode: 0o600 });
+  fs.writeFileSync('/tmp/owner_key.pem', cleanPem(process.env.OWNER_KEY_CONTENT), { mode: 0o600 });
 }
 if (process.env.AGENT_KEY_B64) {
-  fs.writeFileSync('/tmp/agent_key.pem', Buffer.from(process.env.AGENT_KEY_B64, 'base64').toString('utf8'), { mode: 0o600 });
+  fs.writeFileSync('/tmp/agent_key.pem', cleanPem(Buffer.from(process.env.AGENT_KEY_B64, 'base64').toString('utf8')), { mode: 0o600 });
 } else if (process.env.AGENT_KEY_CONTENT) {
-  fs.writeFileSync('/tmp/agent_key.pem', normalizePem(process.env.AGENT_KEY_CONTENT), { mode: 0o600 });
+  fs.writeFileSync('/tmp/agent_key.pem', cleanPem(process.env.AGENT_KEY_CONTENT), { mode: 0o600 });
 }
 
 // Defaults match the live testnet deployment recorded in DEPLOYMENT.md.
