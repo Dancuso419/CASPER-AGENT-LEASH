@@ -670,9 +670,10 @@ function busy(on) {
   document.querySelectorAll('button[data-act]').forEach(b => b.disabled = on);
 }
 
-function setStatus(msg, isError = false) {
+function setStatus(msg, isError = false, isSuccess = false) {
   const el = $('ctlStatus');
   if (!msg) { el.innerHTML = ''; return; }
+  if (isSuccess) { el.style.color = 'var(--ok)'; el.innerHTML = msg; return; }
   el.style.color = isError ? 'var(--err)' : 'var(--warn)';
   el.innerHTML = isError ? msg : `<span class="spin"></span>${msg}`;
 }
@@ -689,16 +690,22 @@ async function act(name) {
     else if (name === 'revoke')   { path = '/api/revoke';   body = {}; }
     else if (name === 'action')   { path = '/api/action';   body = { amountCspr: +$('amtIn').value, recipient: $('rcptIn').value }; }
     setStatus('Waiting for on-chain execution (~15–40s)…');
-    await api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    setStatus('');
+    const res = await api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const successMsg = {
+      register: `Agent registered on-chain ✓ — spending cap set, rules enforced`,
+      deposit:  `Contract funded ✓ — ${$('depIn').value} CSPR deposited to contract purse`,
+      revoke:   `Agent revoked on-chain ✓ — all future actions will be blocked`,
+      action:   res?.allowed
+        ? `Transfer allowed ✓ — ${$('amtIn').value} CSPR moved on-chain`
+        : `Transfer blocked ✗ — ${res?.exec?.errorName || 'enforcement triggered'} (0 CSPR moved)`,
+    }[name] || 'Done ✓';
+    setStatus(successMsg, false, true);
     await refresh();
   } catch(e) {
     errored = true;
     setStatus('Error: ' + e.message, true);
   } finally {
     busy(false);
-    // keep error message visible — only clear on next action
-    if (!errored) setStatus('');
   }
 }
 
