@@ -28,10 +28,15 @@ function normalizePem(raw) {
   if (!pem.endsWith('\n')) pem += '\n';
   return pem;
 }
-if (process.env.OWNER_KEY_CONTENT) {
+// Prefer base64 (survives any env editor untouched); fall back to raw \n-escaped content.
+if (process.env.OWNER_KEY_B64) {
+  fs.writeFileSync('/tmp/owner_key.pem', Buffer.from(process.env.OWNER_KEY_B64, 'base64').toString('utf8'), { mode: 0o600 });
+} else if (process.env.OWNER_KEY_CONTENT) {
   fs.writeFileSync('/tmp/owner_key.pem', normalizePem(process.env.OWNER_KEY_CONTENT), { mode: 0o600 });
 }
-if (process.env.AGENT_KEY_CONTENT) {
+if (process.env.AGENT_KEY_B64) {
+  fs.writeFileSync('/tmp/agent_key.pem', Buffer.from(process.env.AGENT_KEY_B64, 'base64').toString('utf8'), { mode: 0o600 });
+} else if (process.env.AGENT_KEY_CONTENT) {
   fs.writeFileSync('/tmp/agent_key.pem', normalizePem(process.env.AGENT_KEY_CONTENT), { mode: 0o600 });
 }
 
@@ -44,9 +49,9 @@ export const config = {
     process.env.PACKAGE_HASH ||
     'a7d018fcc02bec1a44d1060c6ea77be8869919a91ab4e8f5daf66ecf86acd660',
   ownerKey: process.env.OWNER_KEY ||
-    (process.env.OWNER_KEY_CONTENT ? '/tmp/owner_key.pem' : path.join(home, 'casper-keys/owner/secret_key.pem')),
+    (process.env.OWNER_KEY_B64 || process.env.OWNER_KEY_CONTENT ? '/tmp/owner_key.pem' : path.join(home, 'casper-keys/owner/secret_key.pem')),
   agentKey: process.env.AGENT_KEY ||
-    (process.env.AGENT_KEY_CONTENT ? '/tmp/agent_key.pem' : path.join(home, 'casper-keys/agent/secret_key.pem')),
+    (process.env.AGENT_KEY_B64 || process.env.AGENT_KEY_CONTENT ? '/tmp/agent_key.pem' : path.join(home, 'casper-keys/agent/secret_key.pem')),
   ownerAccountHash:
     process.env.OWNER_ACCOUNT_HASH ||
     'account-hash-104a19bb2e3b5f0db350c28d6941308d33c6134e4eb2fb246cc84b855b054dc3',
