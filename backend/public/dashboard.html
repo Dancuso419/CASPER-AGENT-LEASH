@@ -382,11 +382,13 @@ button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   .logo-name em { display: none; }          /* hide "/ Dashboard" */
   .header-end { gap: 6px; }
 
-  /* Icon-only pill buttons — fixed square so nothing spills */
-  .back-btn, .tour-btn {
-    width: 40px; height: 40px; min-height: 40px;
-    padding: 0; border-radius: 999px;
-    justify-content: center; font-size: 16px;
+  /* Icon-only pill buttons — fixed circles in the header */
+  .header .back-btn, .header .tour-btn {
+    width: 40px !important; height: 40px !important;
+    min-height: 40px !important; max-height: 40px !important;
+    padding: 0 !important; border-radius: 999px !important;
+    justify-content: center; font-size: 18px;
+    flex-shrink: 0;
   }
   .btn-label { display: none; }             /* hide "Home" and "Tour" text */
 
