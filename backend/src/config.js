@@ -1,8 +1,17 @@
 import 'dotenv/config';
 import os from 'node:os';
 import path from 'node:path';
+import fs from 'node:fs';
 
 const home = os.homedir();
+
+// Cloud deployment (Render): write key content from env vars to temp files on startup
+if (process.env.OWNER_KEY_CONTENT) {
+  fs.writeFileSync('/tmp/owner_key.pem', process.env.OWNER_KEY_CONTENT, { mode: 0o600 });
+}
+if (process.env.AGENT_KEY_CONTENT) {
+  fs.writeFileSync('/tmp/agent_key.pem', process.env.AGENT_KEY_CONTENT, { mode: 0o600 });
+}
 
 // Defaults match the live testnet deployment recorded in DEPLOYMENT.md.
 export const config = {
@@ -12,8 +21,10 @@ export const config = {
   packageHash:
     process.env.PACKAGE_HASH ||
     'a7d018fcc02bec1a44d1060c6ea77be8869919a91ab4e8f5daf66ecf86acd660',
-  ownerKey: process.env.OWNER_KEY || path.join(home, 'casper-keys/owner/secret_key.pem'),
-  agentKey: process.env.AGENT_KEY || path.join(home, 'casper-keys/agent/secret_key.pem'),
+  ownerKey: process.env.OWNER_KEY ||
+    (process.env.OWNER_KEY_CONTENT ? '/tmp/owner_key.pem' : path.join(home, 'casper-keys/owner/secret_key.pem')),
+  agentKey: process.env.AGENT_KEY ||
+    (process.env.AGENT_KEY_CONTENT ? '/tmp/agent_key.pem' : path.join(home, 'casper-keys/agent/secret_key.pem')),
   ownerAccountHash:
     process.env.OWNER_ACCOUNT_HASH ||
     'account-hash-104a19bb2e3b5f0db350c28d6941308d33c6134e4eb2fb246cc84b855b054dc3',
