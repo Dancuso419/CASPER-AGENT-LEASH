@@ -1,130 +1,282 @@
-# Casper Agent Leash
+# Leash — On-Chain Permission Enforcement for AI Agents
 
-**A verifiable, enforced, revocable on-chain leash for AI agents that hold money.**
+> **Give your AI agent a wallet. Give yourself a leash.**
 
-AI agents are getting wallets. A private key can do *anything* it permits — there is no scoped,
-verifiable boundary on an autonomous agent's authority. Agent Leash closes that gap: an owner
-registers an agent on-chain with a **spending cap** and an **allowed action**, and a custom Casper
-smart contract **enforces those limits at execution time**. A compliant action succeeds; a
-non-compliant one is *reverted on-chain* — not by middleware that could be bypassed, but by the
-contract itself.
-
-> Built for the Casper Agentic Buildathon 2026. Live on Casper Testnet — every claim below is
-> backed by a real, explorer-verifiable deploy hash (see [`DEPLOYMENT.md`](./DEPLOYMENT.md)).
+Live demo: **[casper-agent-leash.onrender.com](https://casper-agent-leash.onrender.com)**
+Contract on Casper Testnet: [`a7d018fc…acd660`](https://testnet.cspr.live/contract-package/a7d018fcc02bec1a44d1060c6ea77be8869919a91ab4e8f5daf66ecf86acd660)
 
 ---
 
-## The demo in one screen
+## What is this?
 
-The dashboard drives a real agent through its lifecycle, each action a real testnet transaction:
+AI agents are increasingly being given access to money — wallets, tokens, the ability to send funds on their own. That's powerful, but it's also a problem: once you hand an AI agent a private key, there's nothing stopping it from spending all your money, making transactions you didn't intend, or acting in ways you can't predict.
 
-| Action | Result | Why |
-|--------|--------|-----|
-| Owner registers agent (cap 10 CSPR) | ✅ on-chain | identity + rule stored in contract |
-| Agent sends **5 CSPR** (≤ cap) | ✅ **Allowed** — funds move | within the leash |
-| Agent sends **50 CSPR** (> cap) | ❌ **Blocked** — `ExceedsCap`, 0 funds move | contract reverts on-chain |
-| Owner revokes agent | ✅ on-chain | agent set inactive |
-| Agent sends 5 CSPR after revoke | ❌ **Blocked** — `Revoked` | revocation enforced |
+**Leash solves this.** It's an on-chain smart contract on the Casper blockchain that acts as a permission boundary for AI agents. Before an agent can move a single token, the contract checks:
 
-The centerpiece: rows 2 and 3 are the **same entry point, same agent, same contract** — only the
-amount differs. Enforcement lives in the contract, and it is verifiable by anyone.
+1. Is this agent registered?
+2. Is the amount within the owner's set spending cap?
+3. Is the agent still active (not revoked)?
 
-An AI layer makes it agentic: a natural-language instruction ("send 50 CSPR to the owner") is
-routed through **Gemini function-calling**, which chooses the `attempt_transfer` tool; the backend
-submits it, and the contract blocks it. The reasoning is off-chain; the enforcement is on-chain.
+If any check fails, the transaction is **rejected by the blockchain itself** — not by a server, not by software that could be hacked or bypassed, but by immutable code running on a decentralised network. The enforcement cannot be overridden.
 
 ---
 
-## Architecture
+## See it in action (no setup needed)
+
+Visit the live dashboard at **[casper-agent-leash.onrender.com/dashboard.html](https://casper-agent-leash.onrender.com/dashboard.html)**.
+
+The dashboard connects to a real smart contract already deployed on the Casper testnet. You can watch the agent's identity, spending rules, and a live log of every allowed and blocked action — each backed by a real blockchain transaction you can verify.
+
+Hit **"Take Tour"** in the top right for a guided walkthrough of every panel.
+
+---
+
+## The proof (non-technical version)
+
+Here is what actually happened on the Casper blockchain during development — every row below is a real transaction, permanently recorded, that anyone can verify:
+
+| What happened | Was it allowed? | Why |
+|---|---|---|
+| Owner installs the contract | ✅ Yes | Setup |
+| Owner registers the AI agent with a **10 CSPR spending cap** | ✅ Yes | Rules stored on-chain |
+| Owner deposits 100 CSPR into the contract | ✅ Yes | Funds loaded |
+| Agent attempts to send **5 CSPR** (under the cap) | ✅ **Allowed** — funds moved | Within the leash |
+| Agent attempts to send **50 CSPR** (over the cap) | ❌ **Blocked** — zero funds moved | Contract rejected it |
+| Owner revokes the agent | ✅ Yes | Agent deactivated |
+| Agent attempts to send 5 CSPR again | ❌ **Blocked** | Revocation enforced |
+
+The critical point: rows 4 and 5 use the **exact same agent, exact same contract, exact same code path**. Only the amount differs. The blockchain blocked the over-cap attempt automatically — no human intervention, no server-side check, no way to bypass it.
+
+---
+
+## The proof (technical version)
+
+All 7 deploy hashes are verifiable at `https://testnet.cspr.live/deploy/<hash>`:
+
+| # | Action | Deploy hash | Result |
+|---|--------|-------------|--------|
+| 1 | Install contract | `c77f7080…dca79df` | ✅ Success |
+| 2 | `register_agent` (cap 10 CSPR) | `af5f91ee…bc0408` | ✅ Success |
+| 3 | `deposit` 100 CSPR (proxy_caller) | `120cbb4a…ea2d78` | ✅ Success |
+| 4 | `check_and_execute` 5 CSPR | `41bdcf35…0f99` | ✅ **Success** — funds moved |
+| 5 | `check_and_execute` 50 CSPR | `f749daae…deb9d` | ❌ **User error: 5** (ExceedsCap) |
+| 6 | `revoke_agent` | `53c48a21…3491` | ✅ Success |
+| 7 | `check_and_execute` 5 CSPR (post-revoke) | `fe6fb4b0…34c61` | ❌ **User error: 4** (Revoked) |
+
+Contract package hash: `a7d018fcc02bec1a44d1060c6ea77be8869919a91ab4e8f5daf66ecf86acd660`
+Full deployment notes: [`DEPLOYMENT.md`](./DEPLOYMENT.md)
+
+---
+
+## How it works (architecture)
 
 ```
-Dashboard (browser)                          ← identity card, rule panel, green/red action log
-      │  HTTP
-Backend (Node/Express, in WSL)               ← Gemini reasoning + orchestration
-      │                     │
- casper-client            Gemini API          ← reasons over natural language, picks a tool
- (put-deploy / get-deploy)
-      │
- Casper Testnet
-      │
- AgentLeash contract (Odra/Rust)             ← stores identity + rule, ENFORCES cap & active flag
+You (browser dashboard)
+        │
+        │  HTTP
+        ▼
+Backend  (Node.js / Express)
+        │                    │
+        │                    ▼
+        │             Gemini AI  ←── "send 5 CSPR to owner"
+        │             (figures out what action to take)
+        │
+        ▼
+casper-client  (Rust binary)
+        │
+        ▼
+Casper Testnet blockchain
+        │
+        ▼
+AgentLeash smart contract  ←── enforces the spending cap & active flag
 ```
 
-- **On-chain enforcement, not middleware.** The backend never decides whether a transfer is
-  allowed. It submits `check_and_execute`; the contract accepts or reverts with a specific error
-  code, which the backend reads from the deploy execution result and surfaces to the dashboard.
-- **Reasoning vs. enforcement are cleanly separated.** Gemini decides *what to attempt*; the
-  contract decides *what is permitted*.
+**Key design decision:** the backend never decides whether a transaction is allowed. It just submits the request. The smart contract makes the enforcement decision and either executes the transfer or reverts the entire transaction. The backend reads the outcome from the deploy execution result and shows it on the dashboard.
+
+This means:
+- The AI (Gemini) decides *what to attempt*
+- The blockchain decides *what is permitted*
+- Those two roles are cleanly separated and cannot be confused
+
+---
+
+## The smart contract
+
+Written in **Rust** using the [Odra framework](https://odra.dev) (v2.8.2). Source: `contracts/agent_leash/src/agent_leash.rs`.
+
+### Entry points
+
+| Function | Who can call it | What it does |
+|---|---|---|
+| `register_agent(agent, spending_cap, allowed_action)` | Owner only | Stores the agent's identity and permission rules on-chain |
+| `check_and_execute(amount, recipient)` | The agent | Checks the rules, then either transfers funds or reverts |
+| `revoke_agent(agent)` | Owner only | Marks the agent as inactive — all future actions blocked |
+| `deposit()` | Owner only | Funds the contract's purse so it has CSPR to send |
+| `get_agent_status(agent)` | Anyone | Read-only view of an agent's current rules and status |
+
+### Error codes
+
+When the contract blocks an action, it reverts with a specific error code visible in the deploy result:
+
+| Code | Name | Meaning |
+|---|---|---|
+| 1 | `AlreadyRegistered` | Agent was already registered |
+| 2 | `NotOwner` | Caller is not the contract owner |
+| 3 | `AgentNotFound` | No agent with that address registered |
+| 4 | `Revoked` | Agent has been revoked by the owner |
+| 5 | `ExceedsCap` | Transfer amount is above the spending cap |
+| 6 | `ActionNotAllowed` | Action type not in the agent's permission list |
 
 ---
 
 ## Repository layout
 
 ```
-contracts/agent_leash/   Odra smart contract (Rust) — src/agent_leash.rs, 8 unit tests
-backend/                 Node/Express service: casper-client + Gemini + dashboard (public/)
-Leash PRD.md             Product requirements
-Casper TRD.md            Technical requirements
-DEPLOYMENT.md            Every testnet deploy hash + how each call was made
-CONSTRAINTS.md           Risk/constraint log (platform, tooling, on-chain realities)
-CLAUDE.md                Build notes & changelog for AI coding agents
+/contracts/agent_leash/     Rust smart contract (Odra 2.8.2)
+  src/agent_leash.rs        Contract logic — 8 unit tests, all pass
+  wasm/AgentLeash.wasm      Compiled contract (258 KB, optimised)
+
+/backend/                   Node.js service
+  src/server.js             Express API — register, deposit, action, revoke, prompt
+  src/config.js             Env vars + key file handling (local + Render cloud)
+  public/index.html         Landing page
+  public/dashboard.html     Live dashboard
+  Dockerfile                Multi-stage build (Rust for casper-client + Node runtime)
+
+/docs/ (root level)
+  Leash PRD.md              Product requirements document
+  Casper TRD.md             Technical requirements document
+  DEPLOYMENT.md             Every testnet deploy hash + raw casper-client commands used
+  CONSTRAINTS.md            Known limitations and risk log
+  CLAUDE.md                 Build notes and toolchain changelog (for AI coding agents)
 ```
-
-## The contract (`contracts/agent_leash/src/agent_leash.rs`)
-
-Odra 2.8.2. Entry points:
-
-| Fn | Who | Effect |
-|----|-----|--------|
-| `register_agent(agent, spending_cap, allowed_action)` | owner | store identity + rule |
-| `check_and_execute(amount, recipient)` | agent (`caller()`) | transfer if compliant, else revert |
-| `revoke_agent(agent)` | owner | set inactive |
-| `get_agent_status(agent)` | anyone | read identity/rule |
-| `deposit()` (payable) | owner | fund the contract purse |
-
-Error codes (surfaced as `User error: N`): 1 AlreadyRegistered · 2 NotOwner · 3 AgentNotFound ·
-4 Revoked · 5 ExceedsCap · 6 ActionNotAllowed. A blocked action **reverts** (rolling back any
-event), so blocked actions are detected via the deploy's execution result, not events.
 
 ---
-
-## Running it
-
-**Platform note:** the Casper/Odra Rust stack and Node's dependencies do **not** build on Windows
-(`casper-types` uses Unix-only APIs; Node deps hang on the `/mnt/c` mount). Everything runs in
-**WSL2 Ubuntu**. See `CLAUDE.md` for the full toolchain.
-
-### Contract
-```bash
-cd contracts/agent_leash
-cargo odra test            # OdraVM (fast) — 8/8 pass
-cargo odra test -b casper  # real CasperVM — 8/8 pass
-cargo odra build           # -> wasm/AgentLeash.wasm
-```
-
-### Backend + dashboard
-```bash
-cd backend
-cp .env.example .env       # set GEMINI_API_KEY
-bash start.sh              # syncs to Linux fs, installs, launches detached
-# open http://localhost:3001
-```
-
-Requires `casper-client` on PATH, owner/agent keys in `~/casper-keys/`, and Odra's
-`proxy_caller_with_return.wasm` at `~/proxy_caller.wasm` (used to call the payable `deposit`).
-
----
-
-## Known limitations (honest scope)
-
-- **In-flight revocation** is out of scope — revocation blocks the *next* action, not one already
-  in a block (documented in the PRD).
-- **Native associated-keys scoping** (account-level key-weight layer, PRD §5.2) is designed but not
-  yet wired up; contract-level enforcement is the primary, working mechanism.
-- **Single allowed action** (transfers) for the MVP; the `ActionType` enum leaves room to widen.
-- Testnet only. Throwaway keys.
 
 ## Tech stack
 
-Odra 2.8.2 (Rust) · Casper Testnet · casper-client 5.0.1 · Node/Express · Gemini
-(`@google/genai`, function-calling) · vanilla-JS dashboard.
+| Layer | Technology |
+|---|---|
+| Smart contract | Rust · [Odra 2.8.2](https://odra.dev) · Casper Testnet |
+| Contract deployment | casper-client 5.0.1 (legacy `put-deploy` format) |
+| Backend | Node.js 20 · Express |
+| AI reasoning | Google Gemini (`@google/genai` 2.10.0 · function-calling) |
+| Frontend | Vanilla HTML/CSS/JS — no framework |
+| Cloud hosting | [Render.com](https://render.com) — Docker, auto-deploy on push |
+
+---
+
+## Running it locally
+
+> **Platform note:** The Casper/Odra Rust stack uses Unix-only system APIs. If you are on Windows, you must use **WSL2 (Ubuntu)**. The contract and backend both run inside WSL2; the dashboard is served from there and accessed in any browser.
+
+### Prerequisites
+
+```bash
+# 1. Rust toolchain (inside WSL2)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup target add wasm32-unknown-unknown
+
+# 2. Odra CLI
+cargo install cargo-odra
+
+# 3. casper-client
+cargo install casper-client
+
+# 4. Node.js 20+
+# Use nvm or your distro's package manager
+```
+
+### Build and test the contract
+
+```bash
+cd contracts/agent_leash
+
+# Fast tests against the mock VM (no blockchain needed)
+cargo odra test
+
+# Full tests against the real CasperVM semantics
+cargo odra test -b casper
+
+# Compile to WASM
+cargo odra build
+# → wasm/AgentLeash.wasm
+```
+
+All 8 tests pass on both backends.
+
+### Run the backend + dashboard
+
+```bash
+cd backend
+cp .env.example .env
+# Edit .env — set your GEMINI_API_KEY at minimum
+# Also set OWNER_KEY_CONTENT and AGENT_KEY_CONTENT (PEM file contents)
+# or point OWNER_KEY / AGENT_KEY at your local key file paths
+
+npm install
+node src/server.js
+# Dashboard at http://localhost:3001
+```
+
+The backend expects `casper-client` on PATH and key files for the owner and agent accounts. See `.env.example` for all options.
+
+### Deploy your own contract instance
+
+```bash
+# From WSL2, inside contracts/agent_leash/
+casper-client put-deploy \
+  --node-address https://node.testnet.casper.network \
+  --chain-name casper-test \
+  --secret-key ~/casper-keys/owner/secret_key.pem \
+  --session-path wasm/AgentLeash.wasm \
+  --payment-amount 350000000000 \
+  --session-arg "odra_cfg_is_upgradable:bool='true'" \
+  --session-arg "odra_cfg_is_upgrade:bool='false'" \
+  --session-arg "odra_cfg_allow_key_override:bool='true'" \
+  --session-arg "odra_cfg_package_hash_key_name:string='AgentLeash'"
+```
+
+Get testnet CSPR from the [faucet](https://testnet.cspr.live/tools/faucet). Full deployment notes, including all working raw commands, are in [`DEPLOYMENT.md`](./DEPLOYMENT.md).
+
+---
+
+## Deploying to the cloud (Render)
+
+The `backend/Dockerfile` does everything:
+
+1. Stage 1 — compiles `casper-client` from source (Rust)
+2. Stage 2 — installs Node dependencies and copies the binary
+
+**Render environment variables to set:**
+
+| Variable | Value |
+|---|---|
+| `OWNER_KEY_CONTENT` | Full contents of your owner `secret_key.pem` |
+| `AGENT_KEY_CONTENT` | Full contents of your agent `secret_key.pem` |
+| `PROXY_WASM` | `/app/proxy_caller.wasm` |
+| `GEMINI_API_KEY` | Your Gemini API key |
+| `PACKAGE_HASH` | Your deployed contract package hash (without `hash-` prefix) |
+| `OWNER_ACCOUNT_HASH` | `account-hash-...` of the owner key |
+| `AGENT_ACCOUNT_HASH` | `account-hash-...` of the agent key |
+
+At startup, the backend writes the key file contents to `/tmp` so `casper-client` can read them. Keys are never written to disk in the repository.
+
+---
+
+## Known limitations
+
+These are honest, documented scope boundaries — not bugs:
+
+- **In-flight revocation** — if an agent submits a transaction and the owner revokes in the same block, the already-submitted transaction may still land. Revocation blocks the *next* action, not one already in flight. This is a known property of any blockchain system and is documented in the PRD.
+- **Single action type** — the MVP enforces spending caps on token transfers. The `ActionType` enum is designed to be extended but only `transfer` is wired up.
+- **Associated-key scoping** — Casper's native account-level key-weight system was designed as a second enforcement layer but is not yet wired up. The contract-level enforcement is the primary, fully working mechanism.
+- **Testnet only** — all keys are throwaway testnet accounts. Do not use on mainnet without a security audit.
+
+---
+
+## Built for
+
+**Casper Agentic Buildathon 2026**
+
+Every on-chain claim in this README and dashboard is backed by a real testnet deploy hash. Nothing is simulated or mocked. See [`DEPLOYMENT.md`](./DEPLOYMENT.md) for the complete record.
