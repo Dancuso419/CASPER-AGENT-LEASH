@@ -55,6 +55,20 @@ app.get('/api/health', async (_req, res) => {
     ownerAccountHash: config.ownerAccountHash,
     cwd: process.cwd(),
   };
+  // Safe PEM structure inspection — no key material leaked.
+  try {
+    const raw = existsSync(config.ownerKey) ? (await import('node:fs')).readFileSync(config.ownerKey, 'utf8') : '';
+    const lines = raw.split('\n');
+    out.ownerPem = {
+      chars: raw.length,
+      lineCount: lines.length,
+      firstLine: lines[0] || '(empty)',
+      lastNonEmptyLine: [...lines].reverse().find(l => l.trim()) || '(empty)',
+      hasLiteralBackslashN: raw.includes('\\n'),
+      hasRealNewlines: raw.includes('\n'),
+      startsCorrectly: raw.startsWith('-----BEGIN'),
+    };
+  } catch (e) { out.ownerPem = `read error: ${e.message}`; }
   // Actually try to run the binary — the definitive test.
   execFile(config.casperBin, ['--version'], (err, stdout) => {
     out.casperVersion = err ? `SPAWN FAILED: ${err.message}` : stdout.trim();
