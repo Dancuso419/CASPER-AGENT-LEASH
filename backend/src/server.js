@@ -107,7 +107,8 @@ app.post('/api/register', async (req, res) => {
       type: 'register',
       submit: () => casper.registerAgent(config.agentAccountHash, capMotes),
     });
-    if (result.allowed) {
+    const alreadyRegistered = !result.allowed && result.exec?.errorCode === 1;
+    if (result.allowed || alreadyRegistered) {
       store.upsertAgent(config.agentAccountHash, {
         owner: config.ownerAccountHash,
         spendingCapCspr: cap,
@@ -117,6 +118,8 @@ app.post('/api/register', async (req, res) => {
         registerDeploy: result.deployHash,
       });
     }
+    // Treat AlreadyRegistered as idempotent success — agent IS registered on-chain.
+    if (alreadyRegistered) result = { ...result, allowed: true };
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });

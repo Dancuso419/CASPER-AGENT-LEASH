@@ -2,11 +2,8 @@
 // stays in sync with chain for the demo. ponytail: a file, not a database — swap for
 // on-chain reads (get_agent_status) if multi-writer truth is ever needed.
 import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const dir = path.dirname(fileURLToPath(import.meta.url));
-const DB = path.join(dir, '..', 'data.json');
+const DB = process.env.STORE_PATH || '/tmp/leash-data.json';
 
 const empty = { agents: {}, log: [] };
 
