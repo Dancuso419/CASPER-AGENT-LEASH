@@ -164,6 +164,17 @@ app.post('/api/revoke', async (req, res) => {
   }
 });
 
+app.post('/api/reactivate', async (req, res) => {
+  try {
+    const agentHash = req.body.agentAccountHash || config.agentAccountHash;
+    const result = await runAction({ type: 'reactivate', submit: () => casper.reactivateAgent(agentHash) });
+    if (result.allowed) store.upsertAgent(agentHash, { isActive: true });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
 // Derive an account hash from a public key WITHOUT registering — lets "Connect wallet"
 // just establish a session so the user can then register deliberately with a chosen cap.
 app.post('/api/derive-hash', async (req, res) => {

@@ -46,6 +46,20 @@ Gotcha: omitting `odra_cfg_package_hash_to_upgrade` + `odra_cfg_create_upgrade_g
 reverts with `ApiError::MissingArgument [2]` (first attempt `55ea78c9…` failed this way — the
 existing contract was untouched, only gas lost).
 
+## Contract upgrade — v3 (2026-07-19): adds `reactivate_agent`
+
+Same in-place upgrade mechanism (identical command as v2, just the new WASM). Adds owner-only
+`reactivate_agent(agent)` — reverses a revoke by setting `is_active = true`, so a revoked agent
+is no longer a permanent dead-end (important for a replayable demo). 15/15 tests pass on
+OdraVM + CasperVM.
+
+| Item | Value |
+|---|---|
+| Upgrade deploy hash | `a9a3b560fd5e25e005b782265063716753f743bf24c7d952833dc3acb6a50bde` (block 8555386) |
+| Package hash | **unchanged** — `a7d018fcc02bec1a44d1060c6ea77be8869919a91ab4e8f5daf66ecf86acd660` |
+| New entry point | `reactivate_agent(agent: key)` — owner-only |
+| Proof — reactivate live | revoke `fd53ace0…` ✅ → reactivate `e04ab742…` ✅ (blocks 8555395/8555397) |
+
 ## Accounts (throwaway testnet keys, stored in WSL `~/casper-keys/`, NOT in repo)
 
 | Role | Public key | Account hash |

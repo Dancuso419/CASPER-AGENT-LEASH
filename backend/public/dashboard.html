@@ -554,6 +554,7 @@ button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
         <button data-act="updatecap">Update cap</button>
         <button data-act="deposit">Fund contract</button>
         <button class="danger" data-act="revoke">Revoke</button>
+        <button data-act="reactivate">Reactivate</button>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5;">
         <strong>Note:</strong> Funding the contract draws from the platform's owner pool, not
@@ -896,7 +897,8 @@ async function act(name) {
     }
     else if (name === 'updatecap') { path = `/api/agents/${currentAgentHash || CFG.agentAccountHash}/cap`; body = { spendingCapCspr: +$('capIn').value }; }
     else if (name === 'deposit')   { path = '/api/deposit';  body = { amountCspr: +$('depIn').value }; }
-    else if (name === 'revoke')    { path = '/api/revoke';   body = currentAgentHash ? { agentAccountHash: currentAgentHash } : {}; }
+    else if (name === 'revoke')    { path = '/api/revoke';     body = currentAgentHash ? { agentAccountHash: currentAgentHash } : {}; }
+    else if (name === 'reactivate'){ path = '/api/reactivate'; body = currentAgentHash ? { agentAccountHash: currentAgentHash } : {}; }
     else if (name === 'action')    { path = '/api/action';   body = { amountCspr: +$('amtIn').value, recipient: $('rcptIn').value }; }
     setStatus('Waiting for on-chain execution (~15–40s)…');
     const res = await api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -912,6 +914,7 @@ async function act(name) {
         : `Cap update blocked ✗ — ${res?.exec?.errorName || 'not the owner'}`,
       deposit:  `Contract funded ✓ — ${$('depIn').value} CSPR deposited to contract purse`,
       revoke:   `Agent revoked on-chain ✓ — all future actions will be blocked`,
+      reactivate: `Agent reactivated on-chain ✓ — it can act again (within its cap)`,
       action:   res?.allowed
         ? `Transfer allowed ✓ — ${$('amtIn').value} CSPR moved on-chain`
         : `Transfer blocked ✗ — ${res?.exec?.errorName || 'enforcement triggered'} (0 CSPR moved)`,

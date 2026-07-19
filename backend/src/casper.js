@@ -86,6 +86,19 @@ export async function revokeAgent(agentAccountHash) {
   return submit(json);
 }
 
+// Owner-only. Reverse a revocation so the agent can act again.
+export async function reactivateAgent(agentAccountHash) {
+  const json = await run([
+    'put-deploy', ...common(),
+    '--secret-key', config.ownerKey,
+    '--session-package-hash', config.packageHash,
+    '--session-entry-point', 'reactivate_agent',
+    '--payment-amount', '10000000000',
+    '--session-arg', `agent:key='${agentAccountHash}'`,
+  ]);
+  return submit(json);
+}
+
 // Fund the contract purse via Odra's proxy_caller (deposit is payable).
 export async function deposit(amountMotes) {
   const json = await run([

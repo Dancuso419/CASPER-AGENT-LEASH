@@ -55,6 +55,11 @@ pub struct AgentRevoked {
 }
 
 #[odra::event]
+pub struct AgentReactivated {
+    pub agent: Address,
+}
+
+#[odra::event]
 pub struct CapUpdated {
     pub agent: Address,
     pub spending_cap: U512,
@@ -168,6 +173,20 @@ impl AgentLeash {
         record.is_active = false;
         self.agents.set(&agent, record);
         self.env().emit_event(AgentRevoked { agent });
+    }
+
+    /// Owner-only. Reverses a revocation, marking the agent active again so it can act.
+    pub fn reactivate_agent(&mut self, agent: Address) {
+        let mut record = self
+            .agents
+            .get(&agent)
+            .unwrap_or_revert_with(self, Error::AgentNotFound);
+        if self.env().caller() != record.owner {
+            self.env().revert(Error::NotOwner);
+        }
+        record.is_active = true;
+        self.agents.set(&agent, record);
+        self.env().emit_event(AgentReactivated { agent });
     }
 
     /// Read-only identity + rule lookup for the dashboard.
@@ -316,6 +335,61 @@ mod tests {
         env.set_caller(agent);
         contract.check_and_execute(U512::from(50), recipient);
         assert_eq!(env.balance_of(&recipient) - before, U512::from(50));
+    }
+
+    #[test]
+    fn reactivate_restores_ability_to_act() {
+        let (env, mut contract, owner, agent) = setup();
+        let recipient = env.get_account(2);
+
+        env.set_caller(owner);
+        contract.register_agent(agent, U512::from(1_000), ActionType::TransferOnly);
+        env.set_caller(owner);
+        contract.with_tokens(U512::from(1_000)).deposit();
+
+        // Revoke → blocked.
+        env.set_caller(owner);
+        contract.revoke_agent(agent);
+        env.set_caller(agent);
+        assert_eq!(
+            contract.try_check_and_execute(U512::from(100), recipient),
+            Err(Error::Revoked.into())
+        );
+
+        // Reactivate → the same transfer now goes through.
+        env.set_caller(owner);
+        contract.reactivate_agent(agent);
+        assert!(contract.get_agent_status(agent).is_active);
+        let before = env.balance_of(&recipient);
+        env.set_caller(agent);
+        contract.check_and_execute(U512::from(100), recipient);
+        assert_eq!(env.balance_of(&recipient) - before, U512::from(100));
+    }
+
+    #[test]
+    fn non_owner_cannot_reactivate() {
+        let (env, mut contract, owner, agent) = setup();
+        let stranger = env.get_account(3);
+
+        env.set_caller(owner);
+        contract.register_agent(agent, U512::from(10), ActionType::TransferOnly);
+        env.set_caller(owner);
+        contract.revoke_agent(agent);
+
+        env.set_caller(stranger);
+        assert_eq!(
+            contract.try_reactivate_agent(agent),
+            Err(Error::NotOwner.into())
+        );
+    }
+
+    #[test]
+    fn reactivate_unknown_agent_reverts() {
+        let (_env, mut contract, _owner, agent) = setup();
+        assert_eq!(
+            contract.try_reactivate_agent(agent),
+            Err(Error::AgentNotFound.into())
+        );
     }
 
     #[test]
