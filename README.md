@@ -19,13 +19,29 @@ AI agents are increasingly being given access to money — wallets, tokens, the 
 
 If any check fails, the transaction is **rejected by the blockchain itself** — not by a server, not by software that could be hacked or bypassed, but by immutable code running on a decentralised network. The enforcement cannot be overridden.
 
+### Bring your own wallet
+
+Anyone can create their own agent: **connect the [Casper Wallet](https://www.casperwallet.io) browser extension** and your wallet becomes a distinct on-chain agent with its own spending cap. Agent actions are **signed by your own wallet** — the contract sees *your* account as the caller and enforces *your* cap. You can:
+
+- **Connect** — establishes your identity (no transaction, no auto-registration)
+- **Register** — deliberately register your agent with a spending cap you choose
+- **Update cap** — change your agent's limit later without re-registering
+- **Attempt transfer** — sign a spend with your wallet; the contract allows or blocks it
+- **Revoke / Reactivate** — kill the agent, then bring it back if needed
+
+Because the agent can never loosen its own leash (cap changes and revocation are owner-only), an AI agent holding the wallet cannot raise its own limit or un-revoke itself.
+
 ---
 
 ## See it in action (no setup needed)
 
 Visit the live dashboard at **[casper-agent-leash.onrender.com/dashboard.html](https://casper-agent-leash.onrender.com/dashboard.html)**.
 
-The dashboard connects to a real smart contract already deployed on the Casper testnet. You can watch the agent's identity, spending rules, and a live log of every allowed and blocked action — each backed by a real blockchain transaction you can verify.
+The dashboard connects to a real smart contract already deployed on the Casper testnet. You can watch the agent's identity, spending rules, wallet + contract-purse balances, and a live log of every allowed and blocked action — each backed by a real blockchain transaction you can verify.
+
+Two ways to use it:
+- **Demo agent** — use the built-in agent straight away, no wallet needed.
+- **Your own agent** — install the [Casper Wallet extension](https://www.casperwallet.io), click **Connect Wallet**, and register your own agent. Your wallet needs a little testnet CSPR for gas ([faucet](https://testnet.cspr.live/tools/faucet)).
 
 Hit **"Take Tour"** in the top right for a guided walkthrough of every panel.
 
@@ -98,6 +114,19 @@ This means:
 - The blockchain decides *what is permitted*
 - Those two roles are cleanly separated and cannot be confused
 
+### Wallet-signed actions (bring-your-own-wallet mode)
+
+When you connect a Casper Wallet, your agent's transfers are signed by **your** wallet, not a server-held key — so the contract sees your account as the caller and enforces your cap:
+
+```
+1. Backend builds an unsigned deploy  (casper-client make-deploy)
+2. Casper Wallet signs it in your browser
+3. Backend reattaches the signature and submits it  (casper-client send-deploy)
+4. Contract runs check_and_execute → allows or reverts
+```
+
+Owner operations (register, update cap, revoke, reactivate, fund) are signed server-side by the platform owner key — which is why an agent can't loosen its own leash. Gemini natural-language transfers run through the *same* wallet-signing path, so they're enforced against your cap too.
+
 ---
 
 ## The smart contract
@@ -110,9 +139,17 @@ Written in **Rust** using the [Odra framework](https://odra.dev) (v2.8.2). Sourc
 |---|---|---|
 | `register_agent(agent, spending_cap, allowed_action)` | Owner only | Stores the agent's identity and permission rules on-chain |
 | `check_and_execute(amount, recipient)` | The agent | Checks the rules, then either transfers funds or reverts |
+| `update_cap(agent, new_cap)` | Owner only | Changes an agent's spending cap without re-registering |
 | `revoke_agent(agent)` | Owner only | Marks the agent as inactive — all future actions blocked |
+| `reactivate_agent(agent)` | Owner only | Reverses a revoke — the agent can act again |
 | `deposit()` | Owner only | Funds the contract's purse so it has CSPR to send |
 | `get_agent_status(agent)` | Anyone | Read-only view of an agent's current rules and status |
+
+Cap changes and revocation are **owner-only** by design: an agent (or the AI holding its key) can never raise its own cap or un-revoke itself.
+
+### Deployed as an upgradeable contract
+
+The contract is installed as upgradeable and has been upgraded in place twice — adding `update_cap` (v2) and `reactivate_agent` (v3) — **without changing the package hash**, so its address and all prior agent state are preserved. See [`DEPLOYMENT.md`](./DEPLOYMENT.md) for the upgrade deploy hashes and exact commands.
 
 ### Error codes
 
@@ -133,14 +170,16 @@ When the contract blocks an action, it reverts with a specific error code visibl
 
 ```
 /contracts/agent_leash/     Rust smart contract (Odra 2.8.2)
-  src/agent_leash.rs        Contract logic — 8 unit tests, all pass
-  wasm/AgentLeash.wasm      Compiled contract (258 KB, optimised)
+  src/agent_leash.rs        Contract logic — 15 unit tests, all pass
+  wasm/AgentLeash.wasm      Compiled contract (~260 KB, optimised)
 
 /backend/                   Node.js service
-  src/server.js             Express API — register, deposit, action, revoke, prompt
+  src/server.js             Express API — register, deposit, action, cap, revoke,
+                            reactivate, wallet connect/sign/submit, balances, prompt
+  src/casper.js             casper-client wrapper (deploys, wallet-signature reassembly, reads)
   src/config.js             Env vars + key file handling (local + Render cloud)
   public/index.html         Landing page
-  public/dashboard.html     Live dashboard
+  public/dashboard.html     Live dashboard (wallet connect + demo agent)
   Dockerfile                Multi-stage build (Rust for casper-client + Node runtime)
 
 /docs/ (root level)
@@ -157,8 +196,9 @@ When the contract blocks an action, it reverts with a specific error code visibl
 
 | Layer | Technology |
 |---|---|
-| Smart contract | Rust · [Odra 2.8.2](https://odra.dev) · Casper Testnet |
+| Smart contract | Rust · [Odra 2.8.2](https://odra.dev) · Casper Testnet · upgradeable |
 | Contract deployment | casper-client 5.0.1 (legacy `put-deploy` format) |
+| Wallet | [Casper Wallet](https://www.casperwallet.io) browser extension (`window.CasperWalletProvider`) |
 | Backend | Node.js 20 · Express |
 | AI reasoning | Google Gemini (`@google/genai` 2.10.0 · function-calling) |
 | Frontend | Vanilla HTML/CSS/JS — no framework |
@@ -203,7 +243,7 @@ cargo odra build
 # → wasm/AgentLeash.wasm
 ```
 
-All 8 tests pass on both backends.
+All 15 tests pass on both backends.
 
 ### Run the backend + dashboard
 
@@ -270,6 +310,8 @@ These are honest, documented scope boundaries — not bugs:
 
 - **In-flight revocation** — if an agent submits a transaction and the owner revokes in the same block, the already-submitted transaction may still land. Revocation blocks the *next* action, not one already in flight. This is a known property of any blockchain system and is documented in the PRD.
 - **Single action type** — the MVP enforces spending caps on token transfers. The `ActionType` enum is designed to be extended but only `transfer` is wired up.
+- **Registration doesn't prove wallet ownership** — anyone can register a public key as an agent. This is harmless because *actions* still require the real wallet's signature, so a mis-registered key can never actually spend. Proving ownership at registration (via `signMessage`) is a future hardening step.
+- **Shared owner-funded pool** — the contract purse is funded by the platform owner, and every agent spends from it. Per-agent funding would make each user deposit their own CSPR; out of scope for the demo.
 - **Associated-key scoping** — Casper's native account-level key-weight system was designed as a second enforcement layer but is not yet wired up. The contract-level enforcement is the primary, fully working mechanism.
 - **Testnet only** — all keys are throwaway testnet accounts. Do not use on mainnet without a security audit.
 
