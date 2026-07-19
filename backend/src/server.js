@@ -162,6 +162,76 @@ app.post('/api/revoke', async (req, res) => {
   }
 });
 
+// Register a wallet-connected user's public key as a new agent.
+app.post('/api/agents', async (req, res) => {
+  try {
+    const { publicKey, spendingCapCspr = 10 } = req.body;
+    if (!publicKey) return res.status(400).json({ error: 'publicKey required' });
+    const agentAccountHash = await casper.accountAddress(publicKey);
+    const cap = Number(spendingCapCspr);
+    const capMotes = csprToMotes(cap);
+    let result = await runAction({
+      type: 'register',
+      submit: () => casper.registerAgent(agentAccountHash, capMotes),
+    });
+    const alreadyRegistered = !result.allowed && result.exec?.errorCode === 1;
+    if (result.allowed || alreadyRegistered) {
+      store.upsertAgent(agentAccountHash, {
+        owner: config.ownerAccountHash,
+        publicKey,
+        spendingCapCspr: cap,
+        allowedAction: 'TransferOnly',
+        isActive: true,
+        createdAt: Date.now(),
+        registerDeploy: result.deployHash,
+      });
+    }
+    if (alreadyRegistered) result = { ...result, allowed: true };
+    const agent = store.getAgent(agentAccountHash);
+    res.json({ ...agent, agentAccountHash, allowed: result.allowed });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.get('/api/agents/:hash', (req, res) => {
+  const agent = store.getAgent(req.params.hash);
+  if (!agent) return res.status(404).json({ error: 'Agent not found' });
+  res.json({ ...agent, agentAccountHash: req.params.hash });
+});
+
+app.post('/api/agents/:hash/prepare-action', async (req, res) => {
+  try {
+    const agent = store.getAgent(req.params.hash);
+    if (!agent) return res.status(404).json({ error: 'Agent not found' });
+    if (!agent.publicKey) return res.status(400).json({ error: 'Agent has no associated public key (legacy agent)' });
+    const amountMotes = csprToMotes(Number(req.body.amountCspr));
+    const recipient = resolveRecipient(req.body.recipient);
+    const deployJson = await casper.makeCheckAndExecuteDeploy(amountMotes, recipient, agent.publicKey);
+    res.json({ deployJson, signingPublicKey: agent.publicKey });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.post('/api/agents/:hash/submit', async (req, res) => {
+  try {
+    const { signedDeployJson, amountCspr, recipient } = req.body;
+    if (!signedDeployJson) return res.status(400).json({ error: 'signedDeployJson required' });
+    const amountMotes = csprToMotes(Number(amountCspr));
+    const recipientKey = resolveRecipient(recipient);
+    const result = await runAction({
+      type: 'transfer',
+      submit: () => casper.submitSignedDeploy(signedDeployJson),
+      amountMotes,
+      recipient: recipientKey,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
 // The agentic endpoint: natural language -> Gemini -> tool -> on-chain enforcement.
 app.post('/api/prompt', async (req, res) => {
   try {
