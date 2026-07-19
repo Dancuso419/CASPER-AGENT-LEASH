@@ -202,13 +202,16 @@ app.get('/api/agents/:hash', (req, res) => {
 
 app.post('/api/agents/:hash/prepare-action', async (req, res) => {
   try {
-    const agent = store.getAgent(req.params.hash);
-    if (!agent) return res.status(404).json({ error: 'Agent not found' });
-    if (!agent.publicKey) return res.status(400).json({ error: 'Agent has no associated public key (legacy agent)' });
-    const amountMotes = csprToMotes(Number(req.body.amountCspr));
+    // Prefer the publicKey the client sends (from its wallet session) so the action path
+    // survives a store wipe (Render /tmp is ephemeral); fall back to the stored agent.
+    const publicKey = req.body.publicKey || store.getAgent(req.params.hash)?.publicKey;
+    if (!publicKey) return res.status(400).json({ error: 'No public key for this agent — reconnect your wallet' });
+    const amountCspr = Number(req.body.amountCspr);
+    if (!Number.isFinite(amountCspr) || amountCspr <= 0) return res.status(400).json({ error: 'amountCspr must be a positive number' });
+    const amountMotes = csprToMotes(amountCspr);
     const recipient = resolveRecipient(req.body.recipient);
-    const deployJson = await casper.makeCheckAndExecuteDeploy(amountMotes, recipient, agent.publicKey);
-    res.json({ deployJson, signingPublicKey: agent.publicKey });
+    const deployJson = await casper.makeCheckAndExecuteDeploy(amountMotes, recipient, publicKey);
+    res.json({ deployJson, signingPublicKey: publicKey });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
   }
@@ -216,13 +219,16 @@ app.post('/api/agents/:hash/prepare-action', async (req, res) => {
 
 app.post('/api/agents/:hash/submit', async (req, res) => {
   try {
-    const { signedDeployJson, amountCspr, recipient } = req.body;
-    if (!signedDeployJson) return res.status(400).json({ error: 'signedDeployJson required' });
+    const { deployJson, publicKey, signatureHex, amountCspr, recipient } = req.body;
+    if (!deployJson || !publicKey || !signatureHex) {
+      return res.status(400).json({ error: 'deployJson, publicKey and signatureHex are required' });
+    }
+    const signedDeploy = casper.attachApproval(deployJson, publicKey, signatureHex);
     const amountMotes = csprToMotes(Number(amountCspr));
     const recipientKey = resolveRecipient(recipient);
     const result = await runAction({
       type: 'transfer',
-      submit: () => casper.submitSignedDeploy(signedDeployJson),
+      submit: () => casper.submitSignedDeploy(signedDeploy),
       amountMotes,
       recipient: recipientKey,
     });

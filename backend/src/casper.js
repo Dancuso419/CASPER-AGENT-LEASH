@@ -145,7 +145,19 @@ export async function makeCheckAndExecuteDeploy(amountMotes, recipientKey, signi
   return deployJson;
 }
 
-// Submits a pre-signed deploy JSON (from CasperWalletProvider.sign()) to the network.
+// Attach a wallet signature to an unsigned deploy, producing a submittable signed deploy.
+// Casper Wallet's sign() returns only the raw 64-byte signature (signatureHex, 128 chars);
+// a deploy approval needs it prefixed with the key's algorithm tag byte (01=ed25519,
+// 02=secp256k1), which is the same as the public key's first byte. Verified against
+// `casper-client sign-deploy` ground truth: signer = full pubkey hex, signature = tag+rawsig.
+// Handles both 128-char (untagged) and 130-char (already-tagged) inputs defensively.
+export function attachApproval(deployJson, publicKeyHex, signatureHex) {
+  const tag = publicKeyHex.slice(0, 2);
+  const signature = signatureHex.length === 130 ? signatureHex : tag + signatureHex;
+  return { ...deployJson, approvals: [{ signer: publicKeyHex, signature }] };
+}
+
+// Submits a pre-signed deploy JSON to the network.
 export async function submitSignedDeploy(signedDeployJson) {
   const inFile = path.join(tmpdir(), `signed-${randomUUID()}.json`);
   fs.writeFileSync(inFile, JSON.stringify(signedDeployJson));

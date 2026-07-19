@@ -569,6 +569,10 @@ button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
       <div class="btn-row">
         <button class="primary" data-act="action">Attempt transfer</button>
       </div>
+      <div id="gasHint" style="display:none;font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">
+        Signing sends a real deploy from your wallet — your account needs testnet CSPR for gas.
+        Get some at the <a href="https://testnet.cspr.live/tools/faucet" target="_blank">testnet faucet</a>.
+      </div>
       <div class="status" id="ctlStatus"></div>
     </div>
 
@@ -650,6 +654,8 @@ function updateWalletUI() {
   });
   const wp = $('walletPrompt');
   if (wp) wp.style.display = currentAgentHash ? 'none' : 'block';
+  const gh = $('gasHint');
+  if (gh) gh.style.display = currentAgentHash ? 'block' : 'none';
 }
 
 async function connectWallet() {
@@ -694,19 +700,28 @@ async function actWalletAction() {
   try {
     busy(true);
     const amountCspr = +($('amtIn').value);
-    const recipient = $('rcptIn').value;
+    // "self"/"me" means the connected agent itself; owner/agent/raw-hash pass through to the server.
+    let recipient = $('rcptIn').value.trim();
+    if (['self', 'me'].includes(recipient.toLowerCase())) recipient = currentAgentHash;
+
     setStatus('Preparing deploy…');
     const { deployJson, signingPublicKey } = await api(
       `/api/agents/${currentAgentHash}/prepare-action`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amountCspr, recipient }) }
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amountCspr, recipient, publicKey: currentPublicKey }) }
     );
+
     setStatus('Waiting for wallet signature…');
-    const signedStr = await provider.sign(JSON.stringify(deployJson), signingPublicKey);
-    const signedDeployJson = JSON.parse(signedStr);
+    // Casper Wallet expects the deployToJson shape: { deploy: {...} }. It returns
+    // { cancelled, signatureHex, signature } — NOT a signed deploy. Reassembly is server-side.
+    const sig = await provider.sign(JSON.stringify({ deploy: deployJson }), signingPublicKey);
+    if (sig.cancelled) { setStatus('Signing cancelled.', true); return; }
+
     setStatus('Waiting for on-chain execution (~15–40s)…');
     const res = await api(
       `/api/agents/${currentAgentHash}/submit`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ signedDeployJson, amountCspr, recipient }) }
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deployJson, publicKey: signingPublicKey, signatureHex: sig.signatureHex, amountCspr, recipient }) }
     );
     const successMsg = res?.allowed
       ? `Transfer allowed ✓ — ${amountCspr} CSPR moved on-chain`
@@ -714,8 +729,7 @@ async function actWalletAction() {
     setStatus(successMsg, false, true);
     await refresh();
   } catch (e) {
-    const msg = e.message || String(e);
-    setStatus(msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject') ? 'Signing cancelled.' : 'Error: ' + msg, true);
+    setStatus('Error: ' + (e.message || String(e)), true);
   } finally {
     busy(false);
   }
@@ -742,12 +756,29 @@ async function loadConfig() {
 
 let _lastLogKey = null;
 
+let _healing = false;
+
 async function refresh() {
   const agentHash = currentAgentHash || CFG.agentAccountHash;
   let agent = null;
   try {
     if (agentHash) agent = await api(`/api/agents/${agentHash}`);
   } catch { agent = null; }
+
+  // Store lives in Render's ephemeral /tmp — after a restart the server forgets our agent
+  // (404) while the client still has the session. Silently re-register once to heal, guarded
+  // so the 5s poll doesn't spam registration while the first heal is in flight.
+  if (!agent && currentAgentHash && currentPublicKey && !_healing) {
+    _healing = true;
+    try {
+      await api('/api/agents', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publicKey: currentPublicKey, spendingCapCspr: +($('capIn').value || 10) }),
+      });
+      agent = await api(`/api/agents/${agentHash}`).catch(() => null);
+    } catch {} finally { _healing = false; }
+  }
+
   const log = await api('/api/log').catch(() => []);
 
   $('agentHash').textContent = agentHash ? short(agentHash, 12) : '—';
