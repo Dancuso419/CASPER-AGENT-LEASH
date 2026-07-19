@@ -111,6 +111,24 @@ export async function getDeploy(hash) {
   return parseExecution(json);
 }
 
+// Returns "account-hash-<64hexchars>" for a given hex public key.
+// account-address outputs a plain string (not JSON), so we bypass run().
+export async function accountAddress(publicKeyHex) {
+  return new Promise((resolve, reject) => {
+    execFile(
+      config.casperBin,
+      ['account-address', '--public-key', publicKeyHex],
+      (err, stdout, stderr) => {
+        const output = (stdout || '').trim();
+        if (!output.startsWith('account-hash-')) {
+          return reject(new Error(`account-address failed: ${stderr || output}`));
+        }
+        resolve(output);
+      }
+    );
+  });
+}
+
 // Poll until the deploy is executed (or timeout). Returns the parsed execution result.
 export async function pollDeploy(hash, { attempts = 30, intervalMs = 4000 } = {}) {
   for (let i = 0; i < attempts; i++) {
