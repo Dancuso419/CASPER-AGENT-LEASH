@@ -896,7 +896,7 @@ async function act(name) {
     }
     else if (name === 'updatecap') { path = `/api/agents/${currentAgentHash || CFG.agentAccountHash}/cap`; body = { spendingCapCspr: +$('capIn').value }; }
     else if (name === 'deposit')   { path = '/api/deposit';  body = { amountCspr: +$('depIn').value }; }
-    else if (name === 'revoke')    { path = '/api/revoke';   body = {}; }
+    else if (name === 'revoke')    { path = '/api/revoke';   body = currentAgentHash ? { agentAccountHash: currentAgentHash } : {}; }
     else if (name === 'action')    { path = '/api/action';   body = { amountCspr: +$('amtIn').value, recipient: $('rcptIn').value }; }
     setStatus('Waiting for on-chain execution (~15–40s)…');
     const res = await api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

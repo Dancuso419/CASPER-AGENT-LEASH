@@ -154,8 +154,10 @@ app.post('/api/action', async (req, res) => {
 
 app.post('/api/revoke', async (req, res) => {
   try {
-    const result = await runAction({ type: 'revoke', submit: () => casper.revokeAgent(config.agentAccountHash) });
-    if (result.allowed) store.upsertAgent(config.agentAccountHash, { isActive: false });
+    // Revoke the connected wallet's agent when one is supplied; fall back to the demo agent.
+    const agentHash = req.body.agentAccountHash || config.agentAccountHash;
+    const result = await runAction({ type: 'revoke', submit: () => casper.revokeAgent(agentHash) });
+    if (result.allowed) store.upsertAgent(agentHash, { isActive: false });
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
