@@ -200,6 +200,23 @@ app.get('/api/agents/:hash', (req, res) => {
   res.json({ ...agent, agentAccountHash: req.params.hash });
 });
 
+// Owner changes an agent's spending cap on-chain. The agent can't loosen its own leash;
+// only the registering owner (the platform key) can, so this runs server-side.
+app.post('/api/agents/:hash/cap', async (req, res) => {
+  try {
+    const newCap = Number(req.body.spendingCapCspr);
+    if (!Number.isFinite(newCap) || newCap <= 0) return res.status(400).json({ error: 'spendingCapCspr must be a positive number' });
+    const result = await runAction({
+      type: 'update_cap',
+      submit: () => casper.updateCap(req.params.hash, csprToMotes(newCap)),
+    });
+    if (result.allowed) store.upsertAgent(req.params.hash, { spendingCapCspr: newCap });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
 // Main-purse CSPR balance of any account hash — used to show the connected wallet's gas.
 app.get('/api/balance/:hash', async (req, res) => {
   try {

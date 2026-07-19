@@ -213,6 +213,21 @@ README.md                     # setup + usage instructions for judges
   Backend in /backend; read + write (register/deposit/action/revoke) endpoints verified live
   on testnet. get-deploy takes only --node-address (NOT --chain-name). Launch server detached
   (setsid nohup) or the WSL bridge SIGTERMs it. Gemini /api/prompt untested (needs API key).
+- 2026-07-19 — **Multi-agent wallet-connect shipped.** Users connect Casper Wallet extension;
+  each wallet = its own on-chain agent (register via owner key server-side, actions signed by
+  the user's wallet). Casper Wallet `sign(deployJson, pubkey)` returns `{cancelled, signatureHex,
+  signature}` — NOT a signed deploy. Approval reassembled server-side (`attachApproval`): signer=
+  full pubkey hex, signature = pubkey's first byte (01 ed25519 / 02 secp256k1) + raw sig; verified
+  vs `casper-client sign-deploy` ground truth + accepted+executed on testnet. Wallet expects the
+  `{deploy:{…}}` (deployToJson) wrapper as sign input; send-deploy wants the bare deploy. Wallet
+  balance shown via `query-balance --purse-identifier <account-hash>` (result.balance in motes).
+- 2026-07-19 — **CONTRACT UPGRADED to v2 (adds `update_cap`), same package hash a7d018….**
+  Owner-only cap change so agents can't loosen their own leash. Build from Linux fs (copied repo
+  to ~/agent-leash-contract; `./target` MUST symlink ~/target/agent_leash or cargo-odra's copy
+  step fails). Upgrade needs 2 args beyond install: `odra_cfg_is_upgrade='true'`,
+  `odra_cfg_package_hash_to_upgrade:byte_array_32='<pkghash>'`, `odra_cfg_create_upgrade_group=
+  'false'` (else `ApiError::MissingArgument [2]`). Arg names verified in
+  odra-casper-wasm-env-2.8.2/src/host_functions.rs, not guessed. State persists across upgrade.
 
 ---
 

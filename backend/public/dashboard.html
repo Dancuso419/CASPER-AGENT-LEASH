@@ -547,6 +547,7 @@ button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
       </div>
       <div class="btn-row">
         <button class="primary" data-act="register">Register agent</button>
+        <button data-act="updatecap">Update cap</button>
         <button data-act="deposit">Fund contract</button>
         <button class="danger" data-act="revoke">Revoke</button>
       </div>
@@ -857,14 +858,18 @@ async function act(name) {
     busy(true);
     setStatus('Submitting to Casper testnet…');
     let path, body;
-    if      (name === 'register') { path = '/api/register'; body = { spendingCapCspr: +$('capIn').value }; }
-    else if (name === 'deposit')  { path = '/api/deposit';  body = { amountCspr: +$('depIn').value }; }
-    else if (name === 'revoke')   { path = '/api/revoke';   body = {}; }
-    else if (name === 'action')   { path = '/api/action';   body = { amountCspr: +$('amtIn').value, recipient: $('rcptIn').value }; }
+    if      (name === 'register')  { path = '/api/register'; body = { spendingCapCspr: +$('capIn').value }; }
+    else if (name === 'updatecap') { path = `/api/agents/${currentAgentHash || CFG.agentAccountHash}/cap`; body = { spendingCapCspr: +$('capIn').value }; }
+    else if (name === 'deposit')   { path = '/api/deposit';  body = { amountCspr: +$('depIn').value }; }
+    else if (name === 'revoke')    { path = '/api/revoke';   body = {}; }
+    else if (name === 'action')    { path = '/api/action';   body = { amountCspr: +$('amtIn').value, recipient: $('rcptIn').value }; }
     setStatus('Waiting for on-chain execution (~15–40s)…');
     const res = await api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const successMsg = {
       register: `Agent registered on-chain ✓ — spending cap set, rules enforced`,
+      updatecap: res?.allowed
+        ? `Spending cap updated on-chain ✓ — new cap ${$('capIn').value} CSPR enforced`
+        : `Cap update blocked ✗ — ${res?.exec?.errorName || 'not the owner'}`,
       deposit:  `Contract funded ✓ — ${$('depIn').value} CSPR deposited to contract purse`,
       revoke:   `Agent revoked on-chain ✓ — all future actions will be blocked`,
       action:   res?.allowed

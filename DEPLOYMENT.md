@@ -13,6 +13,39 @@ All hashes verifiable on https://testnet.cspr.live
 | Gas consumed | 238,685,609,533 motes (~238.7 CSPR) |
 | WASM | `contracts/agent_leash/wasm/AgentLeash.wasm` (258 KB, optimized) |
 
+## Contract upgrade — v2 (2026-07-19): adds `update_cap`
+
+In-place upgrade (same package hash, prior agent state preserved) adding the owner-only
+`update_cap(agent, new_cap)` entry point so an owner can change an agent's spending cap
+without re-registering. 12/12 unit tests pass on OdraVM and CasperVM.
+
+| Item | Value |
+|---|---|
+| Upgrade deploy hash | `13e9e28e74733317b9970ea2ac62a3f2a0ad542c67dba109d71e9678f86047f5` (block 8554929) |
+| Package hash | **unchanged** — `a7d018fcc02bec1a44d1060c6ea77be8869919a91ab4e8f5daf66ecf86acd660` |
+| New entry point | `update_cap(agent: key, new_cap: u512)` — owner-only (reverts `NotOwner`=2 / `AgentNotFound`=3) |
+| Proof — update_cap live | register test agent `85bf7dc0…` ✅ → `update_cap` 10→99 CSPR `4e58205…` ✅ (block 8554958) |
+
+**Upgrade command** (differs from install — the upgrade path needs two extra `odra_cfg_` args,
+verified against `odra-casper-wasm-env-2.8.2/src/host_functions.rs`, NOT guessed):
+
+```bash
+casper-client put-deploy \
+  --node-address https://node.testnet.casper.network --chain-name casper-test \
+  --secret-key ~/casper-keys/owner/secret_key.pem \
+  --session-path wasm/AgentLeash.wasm --payment-amount 350000000000 \
+  --session-arg "odra_cfg_is_upgradable:bool='true'" \
+  --session-arg "odra_cfg_is_upgrade:bool='true'" \
+  --session-arg "odra_cfg_allow_key_override:bool='true'" \
+  --session-arg "odra_cfg_create_upgrade_group:bool='false'" \
+  --session-arg "odra_cfg_package_hash_key_name:string='AgentLeash'" \
+  --session-arg "odra_cfg_package_hash_to_upgrade:byte_array_32='a7d018fcc02bec1a44d1060c6ea77be8869919a91ab4e8f5daf66ecf86acd660'"
+```
+
+Gotcha: omitting `odra_cfg_package_hash_to_upgrade` + `odra_cfg_create_upgrade_group`
+reverts with `ApiError::MissingArgument [2]` (first attempt `55ea78c9…` failed this way — the
+existing contract was untouched, only gas lost).
+
 ## Accounts (throwaway testnet keys, stored in WSL `~/casper-keys/`, NOT in repo)
 
 | Role | Public key | Account hash |

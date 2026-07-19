@@ -60,6 +60,20 @@ export async function checkAndExecute(amountMotes, recipientKey, signer = 'agent
   return submit(json);
 }
 
+// Owner-only. Change an agent's per-transaction spending cap (signed by the owner key).
+export async function updateCap(agentAccountHash, newCapMotes) {
+  const json = await run([
+    'put-deploy', ...common(),
+    '--secret-key', config.ownerKey,
+    '--session-package-hash', config.packageHash,
+    '--session-entry-point', 'update_cap',
+    '--payment-amount', '5000000000',
+    '--session-arg', `agent:key='${agentAccountHash}'`,
+    '--session-arg', `new_cap:u512='${newCapMotes}'`,
+  ]);
+  return submit(json);
+}
+
 export async function revokeAgent(agentAccountHash) {
   const json = await run([
     'put-deploy', ...common(),

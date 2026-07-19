@@ -54,6 +54,12 @@ pub struct AgentRevoked {
     pub agent: Address,
 }
 
+#[odra::event]
+pub struct CapUpdated {
+    pub agent: Address,
+    pub spending_cap: U512,
+}
+
 /// Contract error codes. Numbers are stable — the backend maps them to human messages.
 #[odra::odra_error]
 pub enum Error {
@@ -129,6 +135,24 @@ impl AgentLeash {
             agent,
             amount,
             recipient,
+        });
+    }
+
+    /// Owner-only. Change an agent's per-transaction spending cap. The agent itself can never
+    /// call this (only the registering owner), so an agent cannot loosen its own leash.
+    pub fn update_cap(&mut self, agent: Address, new_cap: U512) {
+        let mut record = self
+            .agents
+            .get(&agent)
+            .unwrap_or_revert_with(self, Error::AgentNotFound);
+        if self.env().caller() != record.owner {
+            self.env().revert(Error::NotOwner);
+        }
+        record.spending_cap = new_cap;
+        self.agents.set(&agent, record);
+        self.env().emit_event(CapUpdated {
+            agent,
+            spending_cap: new_cap,
         });
     }
 
@@ -254,6 +278,68 @@ mod tests {
         env.set_caller(agent);
         let res = contract.try_check_and_execute(U512::from(100), recipient);
         assert_eq!(res, Err(Error::Revoked.into()));
+    }
+
+    #[test]
+    fn owner_can_update_cap() {
+        let (env, mut contract, owner, agent) = setup();
+        env.set_caller(owner);
+        contract.register_agent(agent, U512::from(10), ActionType::TransferOnly);
+
+        env.set_caller(owner);
+        contract.update_cap(agent, U512::from(500));
+
+        assert_eq!(contract.get_agent_status(agent).spending_cap, U512::from(500));
+    }
+
+    #[test]
+    fn updated_cap_is_enforced() {
+        let (env, mut contract, owner, agent) = setup();
+        let recipient = env.get_account(2);
+
+        env.set_caller(owner);
+        contract.register_agent(agent, U512::from(10), ActionType::TransferOnly);
+        env.set_caller(owner);
+        contract.with_tokens(U512::from(1_000)).deposit();
+
+        // 50 exceeds the initial cap of 10.
+        env.set_caller(agent);
+        assert_eq!(
+            contract.try_check_and_execute(U512::from(50), recipient),
+            Err(Error::ExceedsCap.into())
+        );
+
+        // Owner raises the cap to 100; the same 50 now goes through.
+        env.set_caller(owner);
+        contract.update_cap(agent, U512::from(100));
+        let before = env.balance_of(&recipient);
+        env.set_caller(agent);
+        contract.check_and_execute(U512::from(50), recipient);
+        assert_eq!(env.balance_of(&recipient) - before, U512::from(50));
+    }
+
+    #[test]
+    fn non_owner_cannot_update_cap() {
+        let (env, mut contract, owner, agent) = setup();
+        let stranger = env.get_account(3);
+
+        env.set_caller(owner);
+        contract.register_agent(agent, U512::from(10), ActionType::TransferOnly);
+
+        env.set_caller(stranger);
+        assert_eq!(
+            contract.try_update_cap(agent, U512::from(999)),
+            Err(Error::NotOwner.into())
+        );
+    }
+
+    #[test]
+    fn update_cap_unknown_agent_reverts() {
+        let (_env, mut contract, _owner, agent) = setup();
+        assert_eq!(
+            contract.try_update_cap(agent, U512::from(5)),
+            Err(Error::AgentNotFound.into())
+        );
     }
 
     #[test]
