@@ -934,9 +934,30 @@ async function runPrompt() {
   ps.innerHTML = '<span class="spin"></span>Reasoning, then acting on-chain…';
   $('reason').innerHTML = '';
   try {
-    const res = await api('/api/prompt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
+    const res = await api('/api/prompt', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, publicKey: currentPublicKey, agentAccountHash: currentAgentHash }) });
     if (res.error) { ps.textContent = 'Error: ' + res.error; }
-    else {
+    else if (res.needsSignature) {
+      // Gemini chose a transfer; the CONNECTED WALLET signs so its own cap is enforced on-chain.
+      const provider = getProvider();
+      if (!provider) { ps.textContent = 'Casper Wallet not available.'; }
+      else {
+        ps.innerHTML = '<span class="spin"></span>Waiting for wallet signature…';
+        const sig = await provider.sign(JSON.stringify({ deploy: res.deployJson }), res.signingPublicKey);
+        if (sig.cancelled) { ps.textContent = 'Signing cancelled.'; }
+        else {
+          ps.innerHTML = '<span class="spin"></span>Executing on-chain (~15–40s)…';
+          const sub = await api(`/api/agents/${currentAgentHash}/submit`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deployJson: res.deployJson, publicKey: res.signingPublicKey, signatureHex: sig.signatureHex, amountCspr: res.amountCspr, recipient: res.recipient }) });
+          ps.textContent = `→ ${res.tool.name}(${JSON.stringify(res.tool.args)})`;
+          const a = res.tool.args;
+          const outcome = sub?.allowed
+            ? `the on-chain leash allowed it — ${a.amount_cspr} CSPR moved`
+            : `the on-chain leash blocked it (${sub?.exec?.errorName || 'enforcement triggered'}) — 0 CSPR moved`;
+          $('reason').innerHTML = `<div class="reasoning">Interpreted this as a transfer of ${a.amount_cspr} CSPR to the ${a.recipient}. Submitted to the contract, and ${outcome}.</div>`;
+        }
+      }
+    } else {
       ps.textContent = res.tool ? `→ ${res.tool.name}(${JSON.stringify(res.tool.args)})` : 'No tool call.';
       if (res.reasoning) $('reason').innerHTML = `<div class="reasoning">${res.reasoning}</div>`;
     }

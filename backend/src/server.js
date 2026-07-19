@@ -295,16 +295,28 @@ app.post('/api/prompt', async (req, res) => {
     const { message } = req.body;
     const decision = await reason(message);
     if (decision.call?.name === 'attempt_transfer') {
-      const amountMotes = csprToMotes(Number(decision.call.args.amount_cspr));
+      const amountCspr = Number(decision.call.args.amount_cspr);
+      const amountMotes = csprToMotes(amountCspr);
       const recipient = resolveRecipient(decision.call.args.recipient);
+
+      // Wallet connected: enforce THE CONNECTED WALLET's cap by having it sign, exactly like a
+      // manual transfer (prepare here → client signs → /api/agents/:hash/submit). Otherwise the
+      // spend would run as the demo agent and be checked against the wrong cap.
+      if (req.body.publicKey && req.body.agentAccountHash) {
+        const deployJson = await casper.makeCheckAndExecuteDeploy(amountMotes, recipient, req.body.publicKey);
+        return res.json({
+          tool: decision.call, needsSignature: true,
+          deployJson, signingPublicKey: req.body.publicKey, amountCspr, recipient,
+        });
+      }
+
+      // No wallet: demo path — backend signs with the demo agent key (original behavior).
       const result = await runAction({
         type: 'transfer',
         submit: () => casper.checkAndExecute(amountMotes, recipient),
         amountMotes,
         recipient,
       });
-      // Gemini returns no prose alongside a function call, so synthesize a reasoning
-      // line that ties the AI's decision to the actual on-chain enforcement outcome.
       const { recipient: rcpt, amount_cspr } = decision.call.args;
       const outcome = result.allowed
         ? `the on-chain leash allowed it — ${amount_cspr} CSPR moved`
