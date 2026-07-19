@@ -162,6 +162,18 @@ app.post('/api/revoke', async (req, res) => {
   }
 });
 
+// Derive an account hash from a public key WITHOUT registering — lets "Connect wallet"
+// just establish a session so the user can then register deliberately with a chosen cap.
+app.post('/api/derive-hash', async (req, res) => {
+  try {
+    const { publicKey } = req.body;
+    if (!publicKey) return res.status(400).json({ error: 'publicKey required' });
+    res.json({ agentAccountHash: await casper.accountAddress(publicKey) });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
 // Register a wallet-connected user's public key as a new agent.
 app.post('/api/agents', async (req, res) => {
   try {

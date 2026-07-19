@@ -627,6 +627,7 @@ button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 let CFG = {};
 let currentPublicKey = null;
 let currentAgentHash = null;
+let currentRegistered = false; // true once the connected wallet has been registered on-chain
 
 const $ = id => document.getElementById(id);
 const short = (s, n = 12) => s ? s.slice(0, n) + '…' + s.slice(-6) : '—';
@@ -639,6 +640,7 @@ const explorerUrl = h => `${CFG.explorerBase}/deploy/${h}`;
     if (saved?.publicKey && saved?.agentAccountHash) {
       currentPublicKey = saved.publicKey;
       currentAgentHash = saved.agentAccountHash;
+      currentRegistered = !!saved.registered;
     }
   } catch {}
 })();
@@ -678,17 +680,18 @@ async function connectWallet() {
     setStatus('Waiting for wallet…');
     await provider.requestConnection();
     const publicKey = await provider.getActivePublicKey();
-    const cap = +($('capIn').value || 10);
-    setStatus('Registering agent on-chain (~15–40s)…');
-    const agent = await api('/api/agents', {
+    // Connect only — derive the account hash so we can show identity, but DON'T register.
+    // Registration is a separate, deliberate step where the user picks their own cap.
+    const { agentAccountHash } = await api('/api/derive-hash', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ publicKey, spendingCapCspr: cap }),
+      body: JSON.stringify({ publicKey }),
     });
     currentPublicKey = publicKey;
-    currentAgentHash = agent.agentAccountHash;
-    localStorage.setItem('al_wallet', JSON.stringify({ publicKey, agentAccountHash: agent.agentAccountHash }));
-    setStatus('Agent registered ✓', false, true);
+    currentAgentHash = agentAccountHash;
+    currentRegistered = false;
+    localStorage.setItem('al_wallet', JSON.stringify({ publicKey, agentAccountHash, registered: false }));
+    setStatus('Wallet connected ✓ — set a spending cap, then click “Register agent”.', false, true);
     updateWalletUI();
     await refresh();
   } catch (e) {
@@ -699,6 +702,7 @@ async function connectWallet() {
 function disconnectWallet() {
   currentPublicKey = null;
   currentAgentHash = null;
+  currentRegistered = false;
   localStorage.removeItem('al_wallet');
   updateWalletUI();
   refresh();
@@ -777,8 +781,9 @@ async function refresh() {
 
   // Store lives in Render's ephemeral /tmp — after a restart the server forgets our agent
   // (404) while the client still has the session. Silently re-register once to heal, guarded
-  // so the 5s poll doesn't spam registration while the first heal is in flight.
-  if (!agent && currentAgentHash && currentPublicKey && !_healing) {
+  // so the 5s poll doesn't spam registration while the first heal is in flight. Only heal an
+  // agent that was actually registered before — never auto-register a merely-connected wallet.
+  if (!agent && currentRegistered && currentAgentHash && currentPublicKey && !_healing) {
     _healing = true;
     try {
       await api('/api/agents', {
@@ -871,13 +876,21 @@ async function act(name) {
     busy(true);
     setStatus('Submitting to Casper testnet…');
     let path, body;
-    if      (name === 'register')  { path = '/api/register'; body = { spendingCapCspr: +$('capIn').value }; }
+    if      (name === 'register')  {
+      if (currentPublicKey) { path = '/api/agents'; body = { publicKey: currentPublicKey, spendingCapCspr: +$('capIn').value }; }
+      else { path = '/api/register'; body = { spendingCapCspr: +$('capIn').value }; }
+    }
     else if (name === 'updatecap') { path = `/api/agents/${currentAgentHash || CFG.agentAccountHash}/cap`; body = { spendingCapCspr: +$('capIn').value }; }
     else if (name === 'deposit')   { path = '/api/deposit';  body = { amountCspr: +$('depIn').value }; }
     else if (name === 'revoke')    { path = '/api/revoke';   body = {}; }
     else if (name === 'action')    { path = '/api/action';   body = { amountCspr: +$('amtIn').value, recipient: $('rcptIn').value }; }
     setStatus('Waiting for on-chain execution (~15–40s)…');
     const res = await api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    // Once a connected wallet's agent registers, remember it so the store-wipe heal can recover it.
+    if (name === 'register' && currentPublicKey && res?.allowed) {
+      currentRegistered = true;
+      localStorage.setItem('al_wallet', JSON.stringify({ publicKey: currentPublicKey, agentAccountHash: currentAgentHash, registered: true }));
+    }
     const successMsg = {
       register: `Agent registered on-chain ✓ — spending cap set, rules enforced`,
       updatecap: res?.allowed
