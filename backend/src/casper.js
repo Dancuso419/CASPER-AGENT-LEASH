@@ -1,6 +1,10 @@
 // Thin wrapper over casper-client. Uses execFile (no shell) so args never need quoting.
 // Every command here mirrors a call proven working in DEPLOYMENT.md.
 import { execFile } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { config, ERROR_CODES } from './config.js';
 
 const run = (args) =>
@@ -109,6 +113,64 @@ export async function getDeploy(hash) {
   // get-deploy takes only --node-address (+ hash), NOT --chain-name.
   const json = await run(['get-deploy', '--node-address', config.nodeAddress, hash]);
   return parseExecution(json);
+}
+
+// Produces an unsigned deploy JSON for check_and_execute, to be signed by the wallet.
+// --session-account sets the deploy header account without a secret key (verified Task 1).
+export async function makeCheckAndExecuteDeploy(amountMotes, recipientKey, signingPublicKey) {
+  const outFile = path.join(tmpdir(), `deploy-${randomUUID()}.json`);
+  await new Promise((resolve, reject) => {
+    execFile(
+      config.casperBin,
+      [
+        'make-deploy',
+        '--chain-name', config.chainName,
+        '--session-package-hash', config.packageHash,
+        '--session-entry-point', 'check_and_execute',
+        '--payment-amount', '12000000000',
+        '--session-arg', `amount:u512='${amountMotes}'`,
+        '--session-arg', `recipient:key='${recipientKey}'`,
+        '--session-account', signingPublicKey,
+        '--output', outFile,
+      ],
+      { maxBuffer: 64 * 1024 * 1024 },
+      (err, _stdout, stderr) => {
+        if (err) return reject(new Error(`make-deploy failed: ${stderr || err.message}`));
+        resolve();
+      }
+    );
+  });
+  const deployJson = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+  fs.unlinkSync(outFile);
+  return deployJson;
+}
+
+// Submits a pre-signed deploy JSON (from CasperWalletProvider.sign()) to the network.
+export async function submitSignedDeploy(signedDeployJson) {
+  const inFile = path.join(tmpdir(), `signed-${randomUUID()}.json`);
+  fs.writeFileSync(inFile, JSON.stringify(signedDeployJson));
+  let json;
+  try {
+    json = await new Promise((resolve, reject) => {
+      execFile(
+        config.casperBin,
+        ['send-deploy', '--node-address', config.nodeAddress, '--input', inFile],
+        { maxBuffer: 64 * 1024 * 1024 },
+        (err, stdout, stderr) => {
+          const text = (stdout || '') + (stderr || '');
+          const start = text.indexOf('{');
+          if (start === -1) return reject(new Error(stderr || stdout || String(err)));
+          try { resolve(JSON.parse(text.slice(start))); }
+          catch (e) { reject(new Error(`Could not parse send-deploy output: ${text.slice(0, 400)}`)); }
+        }
+      );
+    });
+  } finally {
+    try { fs.unlinkSync(inFile); } catch { /* best effort */ }
+  }
+  const hash = json?.result?.deploy_hash;
+  if (!hash) throw new Error(`No deploy_hash in send-deploy response: ${JSON.stringify(json).slice(0, 300)}`);
+  return hash;
 }
 
 // Returns "account-hash-<64hexchars>" for a given hex public key.
