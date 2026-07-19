@@ -481,6 +481,7 @@ button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
     <a id="contractLink" class="mono" href="#" target="_blank" style="font-size:12px;font-weight:600">—</a>
   </div>
   <div class="header-end">
+    <button id="connectBtn" class="back-btn" style="background:var(--primary);color:#fff;border-color:var(--ink);flex-shrink:0;">Connect Wallet</button>
     <a class="back-btn" href="/">← <span class="btn-label">Home</span></a>
     <button class="tour-btn" id="tourTrigger">
       <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
@@ -506,6 +507,10 @@ button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
       <div class="drow"><span class="k">Agent</span><span class="v mono" id="agentHash">—</span></div>
       <div class="drow"><span class="k">Owner</span><span class="v mono" id="ownerHash">—</span></div>
       <div class="drow"><span class="k">Registered</span><span class="v" id="createdAt">—</span></div>
+    </div>
+
+    <div id="walletPrompt" style="padding:12px 18px;font-size:12px;color:var(--muted);border-bottom:var(--bw) solid var(--ink);display:none;">
+      Connect your Casper Wallet to create your own agent — spending cap enforced on-chain.
     </div>
 
     <div class="sec" id="secRules">
@@ -606,9 +611,115 @@ button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 <script>
 let CFG = {};
+let currentPublicKey = null;
+let currentAgentHash = null;
+
 const $ = id => document.getElementById(id);
 const short = (s, n = 12) => s ? s.slice(0, n) + '…' + s.slice(-6) : '—';
 const explorerUrl = h => `${CFG.explorerBase}/deploy/${h}`;
+
+// Restore wallet session from localStorage on page load.
+(function restoreSession() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('al_wallet') || 'null');
+    if (saved?.publicKey && saved?.agentAccountHash) {
+      currentPublicKey = saved.publicKey;
+      currentAgentHash = saved.agentAccountHash;
+    }
+  } catch {}
+})();
+
+function getProvider() {
+  return window.CasperWalletProvider?.();
+}
+
+function updateWalletUI() {
+  const btn = $('connectBtn');
+  if (currentAgentHash) {
+    btn.textContent = short(currentAgentHash, 8) + ' ✓';
+    btn.style.background = 'var(--ok)';
+    btn.onclick = disconnectWallet;
+  } else {
+    btn.textContent = 'Connect Wallet';
+    btn.style.background = 'var(--primary)';
+    btn.onclick = connectWallet;
+  }
+  document.querySelectorAll('button[data-act="action"]').forEach(b => {
+    b.disabled = !currentAgentHash;
+    b.title = currentAgentHash ? '' : 'Connect your Casper Wallet to use this';
+  });
+  const wp = $('walletPrompt');
+  if (wp) wp.style.display = currentAgentHash ? 'none' : 'block';
+}
+
+async function connectWallet() {
+  const provider = getProvider();
+  if (!provider) {
+    setStatus('Casper Wallet extension not installed — <a href="https://www.casperwallet.io" target="_blank" style="color:inherit;text-decoration:underline">get it here</a>.', true);
+    return;
+  }
+  try {
+    setStatus('Waiting for wallet…');
+    await provider.requestConnection();
+    const publicKey = await provider.getActivePublicKey();
+    const cap = +($('capIn').value || 10);
+    setStatus('Registering agent on-chain (~15–40s)…');
+    const agent = await api('/api/agents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ publicKey, spendingCapCspr: cap }),
+    });
+    currentPublicKey = publicKey;
+    currentAgentHash = agent.agentAccountHash;
+    localStorage.setItem('al_wallet', JSON.stringify({ publicKey, agentAccountHash: agent.agentAccountHash }));
+    setStatus('Agent registered ✓', false, true);
+    updateWalletUI();
+    await refresh();
+  } catch (e) {
+    setStatus('Wallet error: ' + e.message, true);
+  }
+}
+
+function disconnectWallet() {
+  currentPublicKey = null;
+  currentAgentHash = null;
+  localStorage.removeItem('al_wallet');
+  updateWalletUI();
+  refresh();
+}
+
+async function actWalletAction() {
+  const provider = getProvider();
+  if (!provider) { setStatus('Casper Wallet extension not installed.', true); return; }
+  try {
+    busy(true);
+    const amountCspr = +($('amtIn').value);
+    const recipient = $('rcptIn').value;
+    setStatus('Preparing deploy…');
+    const { deployJson, signingPublicKey } = await api(
+      `/api/agents/${currentAgentHash}/prepare-action`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amountCspr, recipient }) }
+    );
+    setStatus('Waiting for wallet signature…');
+    const signedStr = await provider.sign(JSON.stringify(deployJson), signingPublicKey);
+    const signedDeployJson = JSON.parse(signedStr);
+    setStatus('Waiting for on-chain execution (~15–40s)…');
+    const res = await api(
+      `/api/agents/${currentAgentHash}/submit`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ signedDeployJson, amountCspr, recipient }) }
+    );
+    const successMsg = res?.allowed
+      ? `Transfer allowed ✓ — ${amountCspr} CSPR moved on-chain`
+      : `Transfer blocked ✗ — ${res?.exec?.errorName || 'enforcement triggered'} (0 CSPR moved)`;
+    setStatus(successMsg, false, true);
+    await refresh();
+  } catch (e) {
+    const msg = e.message || String(e);
+    setStatus(msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject') ? 'Signing cancelled.' : 'Error: ' + msg, true);
+  } finally {
+    busy(false);
+  }
+}
 
 async function api(path, opts) {
   const r = await fetch(path, opts);
@@ -632,7 +743,16 @@ async function loadConfig() {
 let _lastLogKey = null;
 
 async function refresh() {
-  const [{ agent }, log] = await Promise.all([api('/api/status'), api('/api/log')]);
+  const agentHash = currentAgentHash || CFG.agentAccountHash;
+  let agent = null;
+  try {
+    if (agentHash) agent = await api(`/api/agents/${agentHash}`);
+  } catch { agent = null; }
+  const log = await api('/api/log').catch(() => []);
+
+  $('agentHash').textContent = agentHash ? short(agentHash, 12) : '—';
+  $('ownerHash').textContent = agent?.owner ? short(agent.owner, 12) : short(CFG.ownerAccountHash, 12);
+
   const badge = $('agentStatus');
   if (!agent) {
     badge.className = 'badge none';
@@ -687,6 +807,7 @@ function setStatus(msg, isError = false, isSuccess = false) {
 
 async function act(name) {
   if (name === 'prompt') return runPrompt();
+  if (name === 'action' && currentAgentHash) return actWalletAction();
   let errored = false;
   try {
     busy(true);
@@ -822,7 +943,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft'  && step > 0) { step--; showStep(); }
 });
 
-loadConfig().then(refresh);
+loadConfig().then(() => { updateWalletUI(); refresh(); });
 setInterval(refresh, 5000);
 if (!localStorage.getItem('alTourDone')) setTimeout(startTour, 900);
 </script>
