@@ -660,14 +660,23 @@ function updateWalletUI() {
     btn.style.background = 'var(--primary)';
     btn.onclick = connectWallet;
   }
-  document.querySelectorAll('button[data-act="action"]').forEach(b => {
-    b.disabled = !currentAgentHash;
-    b.title = currentAgentHash ? '' : 'Connect your Casper Wallet to use this';
-  });
+  // Initial guess; refresh() corrects it once the on-chain registration status is known.
+  setActionEnabled(currentPublicKey ? currentRegistered : true);
   const wp = $('walletPrompt');
   if (wp) wp.style.display = currentAgentHash ? 'none' : 'block';
   const gh = $('gasHint');
   if (gh) gh.style.display = currentAgentHash ? 'block' : 'none';
+}
+
+// Enable "Attempt transfer" only when there's a usable agent: a connected wallet must be
+// registered (and active); the no-wallet demo path always has the registered demo agent.
+function setActionEnabled(canAct) {
+  document.querySelectorAll('button[data-act="action"]').forEach(b => {
+    b.disabled = !canAct;
+    b.title = canAct ? ''
+      : currentPublicKey ? 'Register this agent before attempting a transfer'
+      : 'Connect your Casper Wallet to use this';
+  });
 }
 
 async function connectWallet() {
@@ -811,6 +820,11 @@ async function refresh() {
     badge.innerHTML = '<span class="bdot"></span>revoked';
   }
   $('createdAt').textContent = agent?.createdAt ? new Date(agent.createdAt).toLocaleString() : '—';
+
+  // A connected wallet can only transfer once its agent is registered and active on-chain;
+  // the no-wallet demo path uses the always-registered demo agent. (currentRegistered is a
+  // separate persistent flag used only by the store-wipe heal, so don't overwrite it here.)
+  setActionEnabled(currentPublicKey ? !!(agent && agent.isActive) : true);
 
   // Show the connected wallet's own CSPR balance (the gas it holds to sign actions).
   const balRow = $('balRow');
