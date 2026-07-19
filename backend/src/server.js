@@ -200,6 +200,16 @@ app.get('/api/agents/:hash', (req, res) => {
   res.json({ ...agent, agentAccountHash: req.params.hash });
 });
 
+// Main-purse CSPR balance of any account hash — used to show the connected wallet's gas.
+app.get('/api/balance/:hash', async (req, res) => {
+  try {
+    const motes = await casper.getBalance(req.params.hash);
+    res.json({ motes, cspr: motesToCspr(motes) });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
 app.post('/api/agents/:hash/prepare-action', async (req, res) => {
   try {
     // Prefer the publicKey the client sends (from its wallet session) so the action path

@@ -506,6 +506,7 @@ button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
       </div>
       <div class="drow"><span class="k">Agent</span><span class="v mono" id="agentHash">—</span></div>
       <div class="drow"><span class="k">Owner</span><span class="v mono" id="ownerHash">—</span></div>
+      <div class="drow" id="balRow" style="display:none"><span class="k">Wallet balance</span><span class="v mono" id="walletBal">—</span></div>
       <div class="drow"><span class="k">Registered</span><span class="v" id="createdAt">—</span></div>
     </div>
 
@@ -796,6 +797,18 @@ async function refresh() {
     badge.innerHTML = '<span class="bdot"></span>revoked';
   }
   $('createdAt').textContent = agent?.createdAt ? new Date(agent.createdAt).toLocaleString() : '—';
+
+  // Show the connected wallet's own CSPR balance (the gas it holds to sign actions).
+  const balRow = $('balRow');
+  if (currentAgentHash) {
+    balRow.style.display = '';
+    api(`/api/balance/${currentAgentHash}`)
+      .then(b => { $('walletBal').textContent = `${(+b.cspr).toFixed(2)} CSPR`; })
+      .catch(() => { $('walletBal').textContent = '—'; });
+  } else {
+    balRow.style.display = 'none';
+  }
+
   const capEl = $('cap');
   capEl.innerHTML = agent ? `${agent.spendingCapCspr}<span class="cap-unit">CSPR</span>` : `—<span class="cap-unit">CSPR</span>`;
   $('allowed').textContent = agent?.allowedAction || '—';

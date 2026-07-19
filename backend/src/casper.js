@@ -185,6 +185,18 @@ export async function submitSignedDeploy(signedDeployJson) {
   return hash;
 }
 
+// Returns the main-purse balance (in motes, as a string) for an account hash or public key.
+export async function getBalance(purseIdentifier) {
+  const json = await run([
+    'query-balance',
+    '--node-address', config.nodeAddress,
+    '--purse-identifier', purseIdentifier,
+  ]);
+  const balance = json?.result?.balance;
+  if (balance === undefined) throw new Error(`No balance in response: ${JSON.stringify(json).slice(0, 200)}`);
+  return balance;
+}
+
 // Returns "account-hash-<64hexchars>" for a given hex public key.
 // account-address outputs a plain string (not JSON), so we bypass run().
 export async function accountAddress(publicKeyHex) {
