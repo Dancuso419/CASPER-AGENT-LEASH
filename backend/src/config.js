@@ -59,6 +59,11 @@ export const config = {
   agentAccountHash:
     process.env.AGENT_ACCOUNT_HASH ||
     'account-hash-6bd38f839796576f2a9f3ce3721697519f3f24d21f455755c084ed71d69c2d68',
+  // Contract's own purse (created by the first deposit) — the shared pool agents spend from.
+  // query-balance needs the access-rights suffix (-007). Stable across the in-place upgrade.
+  contractPurseUref:
+    process.env.CONTRACT_PURSE_UREF ||
+    'uref-0210588032158729b3ed0ff0bcedc72787e733186df2d7275c1b9f438f17141d-007',
   proxyWasm: process.env.PROXY_WASM || path.join(backendDir, 'proxy_caller.wasm'),
   casperBin: resolveCasperBin(),
   geminiApiKey: process.env.GEMINI_API_KEY || '',

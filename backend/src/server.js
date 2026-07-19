@@ -227,6 +227,16 @@ app.get('/api/balance/:hash', async (req, res) => {
   }
 });
 
+// Contract purse balance — the shared pool agents spend from.
+app.get('/api/contract-balance', async (_req, res) => {
+  try {
+    const motes = await casper.getBalance(config.contractPurseUref);
+    res.json({ motes, cspr: motesToCspr(motes) });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
 app.post('/api/agents/:hash/prepare-action', async (req, res) => {
   try {
     // Prefer the publicKey the client sends (from its wallet session) so the action path

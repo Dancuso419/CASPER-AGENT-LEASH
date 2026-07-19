@@ -521,9 +521,13 @@ button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
         <div class="cap-label">maximum per transaction</div>
       </div>
       <hr class="cap-sep" />
-      <div class="drow" style="border:none;padding:0">
+      <div class="drow">
         <span class="k">Allowed action</span>
         <span class="v" id="allowed">—</span>
+      </div>
+      <div class="drow" style="border:none;padding-bottom:0">
+        <span class="k">Contract purse</span>
+        <span class="v mono" id="contractBal">—</span>
       </div>
     </div>
   </div>
@@ -813,6 +817,11 @@ async function refresh() {
   const capEl = $('cap');
   capEl.innerHTML = agent ? `${agent.spendingCapCspr}<span class="cap-unit">CSPR</span>` : `—<span class="cap-unit">CSPR</span>`;
   $('allowed').textContent = agent?.allowedAction || '—';
+
+  // Contract purse — the shared pool agents spend from. Always shown (global stat).
+  api('/api/contract-balance')
+    .then(b => { $('contractBal').textContent = `${(+b.cspr).toFixed(2)} CSPR`; })
+    .catch(() => { $('contractBal').textContent = '—'; });
 
   const el = $('log');
   // ponytail: key on hash+status of each entry — skip DOM write if nothing changed
