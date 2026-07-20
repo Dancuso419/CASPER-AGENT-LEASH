@@ -796,7 +796,9 @@ async function refresh() {
   if (!agent && currentRegistered && currentAgentHash && currentPublicKey && !_healing) {
     _healing = true;
     try {
-      await api('/api/agents', {
+      // Store lives in Render's ephemeral /tmp — just rebuild the cache, don't re-deploy.
+      // The agent is already on-chain; a second deploy would land as AlreadyRegistered.
+      await api(`/api/agents/${currentAgentHash}/local-restore`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ publicKey: currentPublicKey, spendingCapCspr: +($('capIn').value || 10) }),
       });

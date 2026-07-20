@@ -225,6 +225,20 @@ app.get('/api/agents/:hash', (req, res) => {
   res.json({ ...agent, agentAccountHash: req.params.hash });
 });
 
+// Restore a known-registered agent to the local store after a /tmp wipe — no deploy.
+// The agent is already on-chain; we're just rebuilding the display cache.
+app.post('/api/agents/:hash/local-restore', (req, res) => {
+  const { publicKey, spendingCapCspr = 10 } = req.body;
+  store.upsertAgent(req.params.hash, {
+    owner: config.ownerAccountHash,
+    publicKey,
+    spendingCapCspr: Number(spendingCapCspr),
+    allowedAction: 'TransferOnly',
+    isActive: true,
+  });
+  res.json({ ...store.getAgent(req.params.hash), agentAccountHash: req.params.hash });
+});
+
 // Owner changes an agent's spending cap on-chain. The agent can't loosen its own leash;
 // only the registering owner (the platform key) can, so this runs server-side.
 app.post('/api/agents/:hash/cap', async (req, res) => {
