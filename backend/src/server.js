@@ -39,6 +39,15 @@ async function runAction({ type, submit, amountMotes, recipient }) {
   return { allowed, deployHash, explorer: explorer(deployHash), exec, row };
 }
 
+// register_agent REVERTS (AlreadyRegistered) instead of updating, so re-registering an existing
+// agent with a new cap would leave the ORIGINAL on-chain cap enforced while the dashboard shows
+// the new one — transfers "over the cap" then go through because the real cap is higher. When the
+// agent already exists, push the requested cap on-chain via update_cap (owner-only, we sign it) so
+// the enforced cap always matches what we display.
+async function reconcileCap(agentHash, capMotes) {
+  return runAction({ type: 'update_cap', submit: () => casper.updateCap(agentHash, capMotes) });
+}
+
 app.get('/api/health', async (_req, res) => {
   const { existsSync } = await import('node:fs');
   const { execFile } = await import('node:child_process');
@@ -107,8 +116,11 @@ app.post('/api/register', async (req, res) => {
       type: 'register',
       submit: () => casper.registerAgent(config.agentAccountHash, capMotes),
     });
-    const alreadyRegistered = !result.allowed && result.exec?.errorCode === 1;
-    if (result.allowed || alreadyRegistered) {
+    // Already on-chain: register_agent won't change the cap, so enforce it via update_cap.
+    if (!result.allowed && result.exec?.errorCode === 1) {
+      result = await reconcileCap(config.agentAccountHash, capMotes);
+    }
+    if (result.allowed) {
       store.upsertAgent(config.agentAccountHash, {
         owner: config.ownerAccountHash,
         spendingCapCspr: cap,
@@ -118,8 +130,6 @@ app.post('/api/register', async (req, res) => {
         registerDeploy: result.deployHash,
       });
     }
-    // Treat AlreadyRegistered as idempotent success — agent IS registered on-chain.
-    if (alreadyRegistered) result = { ...result, allowed: true };
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
@@ -138,8 +148,27 @@ app.post('/api/deposit', async (req, res) => {
 
 app.post('/api/action', async (req, res) => {
   try {
-    const amountMotes = csprToMotes(Number(req.body.amountCspr));
+    const amountCspr = Number(req.body.amountCspr);
+    const amountMotes = csprToMotes(amountCspr);
     const recipient = resolveRecipient(req.body.recipient);
+
+    // Server-side cap check: reject before submitting (saves gas, gives instant feedback).
+    const agent = store.getAgent(config.agentAccountHash);
+    if (agent && agent.spendingCapCspr != null && amountCspr > agent.spendingCapCspr) {
+      return res.json({
+        allowed: false,
+        blocked: true,
+        reason: `Amount ${amountCspr} CSPR exceeds the spending cap of ${agent.spendingCapCspr} CSPR`,
+        exec: { status: 'failure', errorCode: 5, errorName: 'ExceedsCap' },
+        row: store.addLog({
+          type: 'transfer', amountCspr, recipient, deployHash: null,
+          status: 'failure', errorCode: 5, errorName: 'ExceedsCap',
+          message: `Blocked: amount exceeds the agent spending cap (${agent.spendingCapCspr} CSPR)`,
+          explorer: null,
+        }),
+      });
+    }
+
     const result = await runAction({
       type: 'transfer',
       submit: () => casper.checkAndExecute(amountMotes, recipient),
@@ -199,8 +228,11 @@ app.post('/api/agents', async (req, res) => {
       type: 'register',
       submit: () => casper.registerAgent(agentAccountHash, capMotes),
     });
-    const alreadyRegistered = !result.allowed && result.exec?.errorCode === 1;
-    if (result.allowed || alreadyRegistered) {
+    // Already on-chain: register_agent won't change the cap, so enforce it via update_cap.
+    if (!result.allowed && result.exec?.errorCode === 1) {
+      result = await reconcileCap(agentAccountHash, capMotes);
+    }
+    if (result.allowed) {
       store.upsertAgent(agentAccountHash, {
         owner: config.ownerAccountHash,
         publicKey,
@@ -211,7 +243,6 @@ app.post('/api/agents', async (req, res) => {
         registerDeploy: result.deployHash,
       });
     }
-    if (alreadyRegistered) result = { ...result, allowed: true };
     const agent = store.getAgent(agentAccountHash);
     res.json({ ...agent, agentAccountHash, allowed: result.allowed });
   } catch (e) {
@@ -284,6 +315,17 @@ app.post('/api/agents/:hash/prepare-action', async (req, res) => {
     if (!publicKey) return res.status(400).json({ error: 'No public key for this agent — reconnect your wallet' });
     const amountCspr = Number(req.body.amountCspr);
     if (!Number.isFinite(amountCspr) || amountCspr <= 0) return res.status(400).json({ error: 'amountCspr must be a positive number' });
+
+    // Server-side cap check: reject before preparing/signing (saves gas, gives instant feedback).
+    const agent = store.getAgent(req.params.hash);
+    if (agent && agent.spendingCapCspr != null && amountCspr > agent.spendingCapCspr) {
+      return res.status(400).json({
+        error: `Amount ${amountCspr} CSPR exceeds the spending cap of ${agent.spendingCapCspr} CSPR`,
+        errorCode: 5,
+        errorName: 'ExceedsCap',
+      });
+    }
+
     const amountMotes = csprToMotes(amountCspr);
     const recipient = resolveRecipient(req.body.recipient);
     const deployJson = await casper.makeCheckAndExecuteDeploy(amountMotes, recipient, publicKey);
@@ -323,6 +365,29 @@ app.post('/api/prompt', async (req, res) => {
       const amountCspr = Number(decision.call.args.amount_cspr);
       const amountMotes = csprToMotes(amountCspr);
       const recipient = resolveRecipient(decision.call.args.recipient);
+
+      // Server-side cap check: reject before submitting (saves gas, gives instant feedback).
+      const agentHashForCap = req.body.agentAccountHash || config.agentAccountHash;
+      const agentForCap = store.getAgent(agentHashForCap);
+      if (agentForCap && agentForCap.spendingCapCspr != null && amountCspr > agentForCap.spendingCapCspr) {
+        const reasoning = decision.text ||
+          `Interpreted this as a transfer of ${amountCspr} CSPR to the ${decision.call.args.recipient}. ` +
+          `Blocked before submission — ${amountCspr} CSPR exceeds the spending cap of ${agentForCap.spendingCapCspr} CSPR.`;
+        return res.json({
+          reasoning, tool: decision.call,
+          result: {
+            allowed: false, blocked: true,
+            reason: `Amount ${amountCspr} CSPR exceeds the spending cap of ${agentForCap.spendingCapCspr} CSPR`,
+            exec: { status: 'failure', errorCode: 5, errorName: 'ExceedsCap' },
+            row: store.addLog({
+              type: 'transfer', amountCspr, recipient: agentHashForCap, deployHash: null,
+              status: 'failure', errorCode: 5, errorName: 'ExceedsCap',
+              message: `Blocked: amount exceeds the agent spending cap (${agentForCap.spendingCapCspr} CSPR)`,
+              explorer: null,
+            }),
+          },
+        });
+      }
 
       // Wallet connected: enforce THE CONNECTED WALLET's cap by having it sign, exactly like a
       // manual transfer (prepare here → client signs → /api/agents/:hash/submit). Otherwise the
